@@ -82,6 +82,7 @@ const TYPES = {
   other:  { name: 'Annað', hint: 'Allt sem passar ekki annars staðar', unit: 'km', fields: ['title', 'distance', 'dur'], pace: null, titleLabel: 'Hvað var gert?', titlePh: 't.d. skautar eða sjósund' }
 };
 const GOOGLE_G = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+const PENCIL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
 const GRIP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14"/></svg>';
 const MAIL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>';
 /* Íslensk villuboð fyrir innskráningu */
@@ -138,7 +139,11 @@ function cellLabel(list){
   return m ? `${Math.round(m)}′` : `${list.length}×`;
 }
 /* Reitur í vikuriti: fjórar útfærslur (A–D) sem notandinn velur í Stillingum → Útlit */
-function weekCell(list, isToday, who, day){
+function weekCell(list, isToday, who, day, pid){
+  if (pid) return weekCellBase(list, isToday, who, day).replace(/^<div class="/, `<button type="button" data-wday="${esc(pid)}|${day}" class="wbtn `).replace(/<\/div>$/, '</button>');
+  return weekCellBase(list, isToday, who, day);
+}
+function weekCellBase(list, isToday, who, day){
   const st = settings.weekStyle || 'A', cls = `wc wc-${st}${isToday ? ' today' : ''}${list.length ? '' : ' none'}${list.length > 1 ? ' multi' : ''}`;
   const tip = `${who}, ${fmtDate(day)}${list.length ? ': ' + list.map(a => titleOf(a)).join(', ') : ''}`;
   if (!list.length) return `<div class="${cls}" title="${esc(tip)}"></div>`;
@@ -390,6 +395,7 @@ const ICON = {
   down: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>'
 };
 function render(){
+  (window.requestAnimationFrame || setTimeout)(() => { if (typeof measureTabs === 'function') measureTabs(); });
   pendingRender = false;
   document.body.dataset.gate = gate;
   if (gate !== 'app') return renderGate();
@@ -491,8 +497,8 @@ function renderGate(){
   } else if (gate === 'sports'){
     view.innerHTML = `<div class="gate glass" style="margin-top:6vh"><div class="eyebrow" style="margin:0">Skref 1 af 2</div><h1>Hvaða íþróttir stundar þú?</h1>
       <p class="muted">Þær birtast sem flísar þegar þú skráir æfingu. Hinar eru alltaf aðgengilegar undir „Fleiri íþróttir“ og þú getur breytt þessu í Stillingum.</p>
-      <div class="sportpick">${Object.keys(TYPES).map(k => `<button type="button" class="spick" data-act="sportpick" data-k="${k}" aria-pressed="${sportOn(k)}" style="--tc:${tc(k)}">
-        <i></i><b>${TYPES[k].name}</b><span class="ck" aria-hidden="true"></span></button>`).join('')}</div>
+      <div class="sportpick plain">${Object.keys(TYPES).map(k => `<button type="button" class="spick" data-act="sportpick" data-k="${k}" aria-pressed="${sportOn(k)}">
+        <b>${TYPES[k].name}</b><span class="ck" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></button>`).join('')}</div>
       <button class="cta" data-act="sportsnext">Áfram</button></div>`;
   } else if (gate === 'about'){
     view.innerHTML = `<div class="gate glass" style="margin-top:6vh"><div class="eyebrow" style="margin:0">Skref 2 af 2</div><h1>Um þig</h1>
@@ -516,7 +522,7 @@ function renderHome(){
   const title = ui.weekOffset === 0 ? (state.profiles.length > 1 ? 'Vikan okkar' : 'Vikan') : `${ws.getDate()}. ${MON[ws.getMonth()]} – ${we.getDate()}. ${MON[we.getMonth()]}`;
   const rows = state.profiles.map(p => `<button class="wname" data-profile="${p.id}">${avatar(p.id, 22, pname(p.id))}<span>${esc(pname(p.id))}</span></button>` + days.map(d => {
     const ss = state.sessions.filter(s => s.profileId === p.id && s.date === d);
-    return weekCell(ss, d === t, pname(p.id), d);
+    return weekCell(ss, d === t, pname(p.id), d, p.id);
   }).join('')).join('');
   const weekSess = mySessions().filter(s => s.date >= days[0] && s.date <= days[6]);
   const bothCount = state.sessions.filter(s => s.date >= days[0] && s.date <= days[6]).length;
@@ -580,7 +586,7 @@ function itemHtml(s){
   const m = summary(s);
   return `<li><button class="item" data-edit="${esc(s.id)}"><span class="bar" style="background:${tc(TYPES[s.type] ? s.type : 'other')}"></span>
     <span><div class="t">${esc(m.title)}${effPill(effortOf(s))}${pbPill(s)}</div><div class="s">${esc(m.sub)}</div>${spaPills(spaTotals(s.spa))}${m.extra ? `<div class="tiny">${esc(m.extra)}</div>` : ''}</span>
-    <span class="d">${fmtDate(s.date)}${ui.histBoth && ui.tab === 'history' ? `<br>${esc(pname(s.profileId))}` : ''}${(() => { const b = kudosBadge(kudosOf(s.profileId, s.id)); return b ? `<br>${b}` : ''; })()}</span></button></li>`;
+    <span class="d"><span class="edhint" aria-hidden="true">${PENCIL}</span>${fmtDate(s.date)}${ui.histBoth && ui.tab === 'history' ? `<br>${esc(pname(s.profileId))}` : ''}${(() => { const b = kudosBadge(kudosOf(s.profileId, s.id)); return b ? `<br>${b}` : ''; })()}</span></button></li>`;
 }
 
 /* Skrá */
@@ -589,7 +595,7 @@ function renderLog(){
     const mine = Object.keys(TYPES).filter(k => sportOn(k)), rest = Object.keys(TYPES).filter(k => !sportOn(k));
     view.innerHTML = `<div class="eyebrow">Skráð á ${esc(pname(state.active))}</div><h1>Hvað á að gera?</h1>
       ${state.active === me.uid ? `<div class="watchrow glass"><button class="watchbtn" data-act="importopen"><span class="wic">${WATCH}</span>
-        <span><b>Sækja æfingar úr úri</b><span class="tiny">Garmin, Apple Watch, Strava og fleira</span></span></button>
+        <span><b>Sækja æfingar úr úri</b><span class="tiny">Samsung, Garmin, Strava og fleira</span></span></button>
         <button class="ibtn" data-act="importhelp" aria-label="Leiðbeiningar fyrir hvert úr">i</button></div>` : ''}
       <div class="types">${mine.map(k => { const T = TYPES[k]; return `<button class="type glass" style="--tc:${tc(k)}" data-newtype="${k}"><i></i><b>${T.name}</b><span>${T.hint}</span></button>`; }).join('')}</div>
       ${rest.length ? `<details class="more"${ui.moreOpen ? ' open' : ''}><summary>Fleiri íþróttir</summary><div class="opts" style="padding:8px 0 0">${rest.map(k => `<button class="chip spachip" data-newtype="${k}"><i style="background:${tc(k)}"></i>${TYPES[k].name}</button>`).join('')}</div>
@@ -651,6 +657,8 @@ function renderLift(){
       </div>`;
   }
   view.innerHTML = `${edTop()}
+    ${!isNewDraft() ? `<div class="editbar glass">${PENCIL}<span><b>Þú ert að breyta æfingu</b><span class="tiny">Breytingar vistast þegar þú ýtir á Vista.</span></span>
+      <label class="edate"><span class="tiny">Dagsetning</span><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}"></label></div>` : ''}
     <div class="chips" role="group" aria-label="Æfingar í þessari lotu">
       ${exs.map((e, i) => `<button class="chip" data-act="curex" data-ei="${i}" aria-pressed="${i === draft.cur}">${esc(e.name || exName(e.exId))}<small>${e.sets.length}</small></button>`).join('')}
       <button class="chip" data-act="pickex">+ Æfing</button>
@@ -659,11 +667,12 @@ function renderLift(){
     <label class="f" for="notes">Athugasemd</label>
     <textarea class="in" id="notes" data-field="notes" placeholder="Hvernig gekk?">${esc(draft.notes ?? '')}</textarea>
     <div class="grid2">
-      <div><label class="f" for="ddate">Dagsetning</label><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}"></div>
+      ${isNewDraft() ? `<div><label class="f" for="ddate">Dagsetning</label><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}"></div>` : ''}
       <div><label class="f" for="dur">Heildartími</label><input class="in" id="dur" data-field="dur" inputmode="decimal" placeholder="${draft.startedAt ? 'Reiknast sjálfur' : 't.d. 55'}" value="${esc(draft.durRaw ?? '')}"></div>
     </div>
     ${spaEditor()}
     ${ex ? `<button class="btn ghost block" style="margin-top:12px" data-act="rmex">Fjarlægja ${esc(ex.name || exName(ex.exId))} úr lotunni</button>` : ''}
+    <button class="cta savebottom" data-act="savelog">${isNewDraft() ? 'Vista æfingu' : 'Vista breytingar'}</button>
     ${shareRow()}
     ${!isNewDraft() ? commentsBlock(draft.profileId, draft.id, draft.profileId === me.uid ? null : draft) : ''}
     ${!isNewDraft() ? `<button class="btn ghost danger block" data-act="dellog">Eyða þessari æfingu</button>` : ''}`;
@@ -686,6 +695,7 @@ function renderCardio(){
   if (has('rounds')) small.push(numF('rounds', 'Lotur', 'lotur', 't.d. 6'));
   if (has('hr') && draft.type !== 'run') small.push(numF('hrRaw', 'Meðalpúls', 'slög', 'valfrjálst'));
   view.innerHTML = `${edTop()}
+    ${!isNewDraft() ? `<div class="editbar glass">${PENCIL}<span><b>Þú ert að breyta æfingu</b><span class="tiny">Dagsetninguna og allt annað má laga hér. Breytingar vistast þegar þú ýtir á Vista.</span></span></div>` : ''}
     <div class="chips" role="group" aria-label="Íþrótt">${others.map(k => `<button class="chip" data-act="settype" data-t="${k}" aria-pressed="${k === draft.type}">${TYPES[k].name}</button>`).join('')}</div>
     ${subs.length ? `<div class="opts" style="padding:0 0 4px" role="group" aria-label="Tegund">${subs.map(k => `<button class="chip" data-act="setsub" data-s="${k}" aria-pressed="${draft.sub === k}">${subName(draft.type, k)}</button>`).join('')}
       ${T.customSub ? `<button class="chip" data-act="setsub" data-s="" aria-pressed="${!draft.sub}">${T.customSub}</button>` : ''}</div>` : ''}
@@ -722,7 +732,7 @@ function renderCardio(){
     <label class="f" for="ddate">Dagsetning</label><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}">
     <label class="f" for="notes">Athugasemd</label>
     <textarea class="in" id="notes" data-field="notes" placeholder="Hvernig gekk?">${esc(draft.notes ?? '')}</textarea>
-    <button class="cta" data-act="savelog">Vista</button>
+    <button class="cta savebottom" data-act="savelog">${isNewDraft() ? 'Vista æfingu' : 'Vista breytingar'}</button>
     ${shareRow()}
     ${!isNewDraft() ? commentsBlock(draft.profileId, draft.id, draft.profileId === me.uid ? null : draft) : ''}
     ${!isNewDraft() ? `<button class="btn ghost danger block" style="margin-top:10px" data-act="dellog">Eyða þessari æfingu</button>` : ''}`;
@@ -787,7 +797,7 @@ function startDraft(type, existing){
     if (draft.type === 'lift'){ draft.cur = 0; draft.exercises = draft.exercises || []; draft.exercises.forEach(e => e.cur = null); }
     else { draft.exercises = (draft.exercises || []).map(e => ({ ...e, sets: e.sets.map(st => ({ kg: fmtIn(st.kg), reps: String(st.reps ?? '') })) })); if (draft.resTime) draft.resTime = fmtDur(draft.resTime); }
   } else {
-    draft = {id: uid(), profileId: state.active, type, sub: firstSub(type), date: today(), notes: '', distRaw: '', durRaw: '', exercises: []};
+    draft = {id: uid(), profileId: state.active, type, sub: firstSub(type), date: ui.presetDate || today(), notes: '', distRaw: '', durRaw: '', exercises: []}; ui.presetDate = null;
     if (type === 'lift'){ draft.exercises = []; draft.cur = 0; draft.startedAt = Date.now(); }
   }
   saveDraft(); ui.tab = 'log'; render(); window.scrollTo(0, 0);
@@ -2103,7 +2113,7 @@ function detachGoals(){
 }
 
 /* ---------- Innlestur úr úrum ---------- */
-const WATCH = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 6l.7-3.2h4.6L15 6M9 18l.7 3.2h4.6L15 18M12 9.5V12l1.6 1"/></svg>';
+const WATCH = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M9 6.2L9.6 2.5h4.8l.6 3.7M9 17.8l.6 3.7h4.8l.6-3.7M12 9.3V12l1.8 1.2"/><path d="M18.5 11v2"/></svg>';
 const SOURCE_NAMES = { garmin: 'Garmin', apple: 'Apple Watch', strava: 'Strava', gpx: 'GPX-skrá', tcx: 'TCX-skrá' };
 let importState = null;
 function pickImportFile(){
@@ -2186,8 +2196,8 @@ function doImport_(){
   toast([list.length ? `${list.length} ${list.length % 10 === 1 && list.length % 100 !== 11 ? 'æfing lesin' : 'æfingar lesnar'} inn` : '', merged.length ? `${merged.length} ${merged.length % 10 === 1 && merged.length % 100 !== 11 ? 'uppfærð' : 'uppfærðar'} með gögnum úr úrinu` : ''].filter(Boolean).join(', '));
 }
 function openImportHelp(tab){
-  const t = tab || ui.importHelp || 'garmin'; ui.importHelp = t;
-  const tabs = [['garmin', 'Garmin'], ['apple', 'Apple Watch'], ['samsung', 'Galaxy Watch'], ['strava', 'Strava og önnur']];
+  const t = tab || ui.importHelp || 'samsung'; ui.importHelp = t;
+  const tabs = [['samsung', 'Galaxy Watch'], ['garmin', 'Garmin'], ['strava', 'Strava og önnur'], ['apple', 'Apple Watch']];
   const steps = {
     garmin: `<p class="muted">Best að gera í tölvu, á connect.garmin.com.</p>
       <div class="hstep"><b>Margar æfingar í einu</b><ol><li>Farðu í <i>Activities → All Activities</i>.</li><li>Ýttu á <i>Export CSV</i> efst til hægri. Skráin <i>Activities.csv</i> vistast.</li><li>Hér: <i>Velja skrá</i> og veldu hana.</li></ol></div>
@@ -2651,6 +2661,16 @@ function openInstallHelp(tab){
     <p class="tiny" style="margin-top:12px">Táknið á heimaskjánum heitir <b>Æfingabókin</b>. Þú ert áfram innskráð(ur) þegar þú opnar það.</p>`);
 }
 
+/* ---------- Dagur í vikuritinu: sjá og breyta æfingum þess dags ---------- */
+function openDay(pid, day){
+  const list = state.sessions.filter(s => s.profileId === pid && s.date === day).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+  if (list.length === 1){ if (pid !== state.active) setActive(pid); startDraft(list[0].type, list[0]); return; }
+  const who = pid === me.uid ? '' : `${pname(pid)}, `;
+  openSheet(`${who}${fmtDate(day)}`, `${list.length ? `<p class="muted" style="margin-top:0">Veldu æfingu til að skoða eða breyta, t.d. ef dagsetningin er röng.</p>
+      <ul class="list glass">${list.map(itemHtml).join('')}</ul>` : `<p class="muted" style="margin-top:0">Engin æfing skráð þennan dag.</p>`}
+    <button class="btn block" style="margin-top:12px" data-act="logday" data-lpid="${esc(pid)}" data-lday="${day}">+ Skrá æfingu á þennan dag</button>`);
+}
+
 /* ---------- Gröf ---------- */
 function niceMax(v){ if (v <= 0) return 1; const p = 10 ** Math.floor(Math.log10(v)), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
 function lineChart(pts, o = {}){
@@ -3000,7 +3020,8 @@ document.addEventListener('click', async e => {
   if (d.tab){ ui.tab = d.tab; render(); window.scrollTo(0, 0); return; }
   if (d.pid){ setActive(d.pid); if (draft && isNewDraft()){ draft.profileId = d.pid; (draft.exercises || []).forEach(x => { if (!x.sets.length) x.cur = suggestion(x); }); saveDraft(); } render(); return; }
   if (d.newtype){ ui.moreOpen = false; startDraft(d.newtype); return; }
-  if (d.edit){ const s = state.sessions.find(x => x.id === d.edit); if (s){ if (s.profileId !== state.active) setActive(s.profileId); startDraft(s.type, s); } return; }
+  if (d.edit){ const s = state.sessions.find(x => x.id === d.edit); if (s){ closeSheet(); if (s.profileId !== state.active) setActive(s.profileId); startDraft(s.type, s); } return; }
+  if (d.wday){ const [pid, day] = d.wday.split('|'); openDay(pid, day); return; }
   if (d.pickex){ addExercise(d.pickex); return; }
   if (d.newex){ const name = d.newex.trim(); if (!name) return; const ex = {id: 'c_' + uid(), name, g: 'Mínar æfingar', custom: true};
     state.customExercises.push(ex); Store.putExercise(hid, ex).catch(fail('Vistun æfingar'));
@@ -3045,6 +3066,7 @@ document.addEventListener('click', async e => {
       break; }
     case 'invite': invite(); break;
     case 'sheetclose': closeSheet(); break;
+    case 'logday': closeSheet(); if (d.lpid !== state.active) setActive(d.lpid); draft = null; saveDraft(); ui.presetDate = d.lday; ui.tab = 'log'; render(); window.scrollTo(0, 0); break;
     case 'diststep': case 'distpre': {
       const st = distStep(), cur = num(draft.distRaw) || 0;
       let v = d.act === 'distpre' ? +d.v : Math.max(0, Math.round((cur + st * +d.dir) / st) * st);
@@ -3196,6 +3218,20 @@ document.addEventListener('click', async e => {
   }
 });
 $('#settingsBtn').addEventListener('click', openSettings);
+/* Mælir hve mikið pláss flipastikan tekur neðst (með upphækkaða Skrá-hnappnum og öryggissvæði símans),
+   svo hægt sé að skruna öllu efni upp fyrir hana, líka þegar letur er stækkað í stillingum símans */
+function measureTabs(){
+  const t = document.querySelector('.tabs'); if (!t) return;
+  const r = t.getBoundingClientRect();
+  const raised = t.querySelector('.tab-log .plus'), top = raised ? Math.min(r.top, raised.getBoundingClientRect().top) : r.top;
+  const space = r.height && getComputedStyle(t).display !== 'none' ? Math.ceil(window.innerHeight - top) : 0;
+  if (space > 0) document.documentElement.style.setProperty('--tabspace', `${space}px`);
+  else document.documentElement.style.removeProperty('--tabspace');
+}
+window.addEventListener('resize', measureTabs);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', measureTabs);
+if (window.ResizeObserver){ const ro = new ResizeObserver(measureTabs); const tb = document.querySelector('.tabs'); if (tb) ro.observe(tb); }
+setTimeout(measureTabs, 300);
 /* Netsamband: allt vistast í símanum og sendist þegar netið kemur */
 const netbar = document.createElement('div'); netbar.className = 'netbar'; netbar.setAttribute('role', 'status');
 netbar.innerHTML = `<span class="nd" aria-hidden="true"></span><span><b>Ekkert netsamband.</b> Það sem þú skráir vistast í símanum og sendist sjálfkrafa þegar netið kemur.</span>`;
