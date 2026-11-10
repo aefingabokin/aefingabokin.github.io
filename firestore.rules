@@ -1,0 +1,216 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    function isMember(hid) {
+      return signedIn() && me() in get(/databases/$(database)/documents/households/$(hid)).data.members;
+    }
+    // Makinn: notendurnir eru í sama heimili
+    function isPartner(uid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(uid))
+        && exists(/databases/$(database)/documents/users/$(me()))
+        && get(/databases/$(database)/documents/users/$(me())).data.get('householdId', null) != null
+        && get(/databases/$(database)/documents/users/$(uid)).data.get('householdId', null)
+           == get(/databases/$(database)/documents/users/$(me())).data.get('householdId', null);
+    }
+    function isFriend(uid) {
+      return signedIn()
+        && (exists(/databases/$(database)/documents/friendships/$(me() + '_' + uid))
+         || exists(/databases/$(database)/documents/friendships/$(uid + '_' + me())));
+    }
+    // Stjórnandi (stjórnborðið á /admin). Settu netfang stjórnanda hér í stað NETFANG_STJORNANDA áður en reglurnar eru
+    // límdar inn í Firebase. Reglurnar sem eru í notkun eru í Firebase-stjórnborðinu, svo netfangið er ekki í opna gagnasafninu.
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == 'NETFANG_STJORNANDA' && request.auth.token.email_verified == true;
+    }
+    function onlyChanged(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+
+    // ---------- Notandi og heimili ----------
+    // Notandi les og skrifar aðeins sitt eigið skjal (heimili og stillingar).
+    // householdId má aðeins vísa á heimili sem notandinn er sjálfur meðlimur í.
+    match /users/{uid} {
+      allow read, delete: if signedIn() && me() == uid;
+      allow create, update: if signedIn() && me() == uid
+        && (request.resource.data.get('householdId', null) == null
+            || me() in get(/databases/$(database)/documents/households/$(request.resource.data.householdId)).data.members);
+
+      // Mælingar (þyngd, fituprósenta o.fl.): eingöngu notandinn sjálfur, hvorki maki né vinir
+      match /measurements/{mid} {
+        allow read, delete: if signedIn() && me() == uid;
+        allow create, update: if signedIn() && me() == uid
+          && request.resource.data.date is string
+          && request.resource.data.keys().size() <= 20;
+      }
+
+      // Markmið og áhersla: notandinn sjálfur sér öll, maki og vinir aðeins þau sem eru merkt shared
+      match /goals/{gid} {
+        allow read: if signedIn() && (me() == uid
+          || ((isPartner(uid) || isFriend(uid)) && resource.data.shared == true));
+        allow create, delete: if signedIn() && me() == uid;
+        allow update: if signedIn() && (
+          me() == uid
+          || ((isPartner(uid) || isFriend(uid))
+              && resource.data.shared == true
+              && onlyChanged(['kudos'])
+              && request.resource.data.kudos.diff(resource.data.get('kudos', {})).affectedKeys().hasOnly([me()]))
+        );
+      }
+
+      // Yfirlit æfinga sem vinir sjá
+      match /shared/{sid} {
+        allow read: if signedIn() && (me() == uid || isPartner(uid) || isFriend(uid));
+        allow create, delete: if signedIn() && (me() == uid || isPartner(uid));
+        allow update: if signedIn() && (
+          me() == uid || isPartner(uid)
+          // Vinur má aðeins bæta við eða taka til baka sitt eigið hrós
+          || (isFriend(uid)
+              && onlyChanged(['kudos'])
+              && request.resource.data.kudos.diff(resource.data.get('kudos', {})).affectedKeys().hasOnly([me()]))
+        );
+        // Athugasemdir við æfingu: eigandi, maki og vinir. Hámark 300 stafir. Hver eyðir sinni, eigandi getur eytt öllum.
+        match /comments/{cid} {
+          allow read: if signedIn() && (me() == uid || isPartner(uid) || isFriend(uid));
+          allow create: if signedIn() && (me() == uid || isPartner(uid) || isFriend(uid))
+            && request.resource.data.from == me()
+            && request.resource.data.text is string
+            && request.resource.data.text.size() > 0
+            && request.resource.data.text.size() <= 300;
+          allow delete: if signedIn() && (resource.data.from == me() || me() == uid);
+          allow update: if false;
+        }
+      }
+
+      // Tilkynningar (t.d. ný athugasemd). Aðeins eigandinn les sínar, maki og vinir geta sent.
+      match /inbox/{iid} {
+        allow read, update: if signedIn() && me() == uid;
+        allow create: if signedIn() && me() != uid && (isPartner(uid) || isFriend(uid))
+          && request.resource.data.from == me()
+          && request.resource.data.get('text', '').size() <= 300;
+        allow delete: if signedIn() && (me() == uid || resource.data.from == me());
+      }
+    }
+
+    match /households/{hid} {
+      allow read: if signedIn() && me() in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.members == [me()]
+        && request.resource.data.owner == me();
+      allow update: if signedIn() && (
+        (me() in resource.data.members
+          && request.resource.data.members == resource.data.members
+          && request.resource.data.owner == resource.data.owner)
+        ||
+        (!(me() in resource.data.members)
+          && resource.data.members.size() < 2
+          && request.resource.data.members == resource.data.members.concat([me()])
+          && onlyChanged(['members', 'profiles']))
+      );
+      match /sessions/{sid} {
+        allow read, write: if isMember(hid);
+      }
+      match /exercises/{eid} {
+        allow read, write: if isMember(hid);
+      }
+    }
+
+    // ---------- Nafnlaus tölfræði ----------
+    // Innskráðir notendur geta aðeins hækkað samtölur í þekktum skjölum. Enginn nema stjórnandi getur lesið þær.
+    match /metrics/{doc} {
+      allow read, delete: if isAdmin();
+      allow create, update: if signedIn()
+        && (doc in ['totals', 'custom', 'cohorts']
+            || doc.matches('day-[0-9]{4}-[0-9]{2}-[0-9]{2}')
+            || doc.matches('week-[0-9]{4}-W[0-9]{2}'));
+    }
+
+    // ---------- Ábendingar ----------
+    // Innskráðir geta sent. Nafnlaust nema notandinn haki við að hafa megi samband. Aðeins stjórnandi les og afgreiðir.
+    match /feedback/{id} {
+      allow create: if signedIn()
+        && request.resource.data.type in ['idea', 'bug', 'other']
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.get('uid', me()) == me();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ---------- Vinir ----------
+    // Nafn og vinakóði: innskráðir notendur geta séð nöfn
+    match /people/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && me() == uid && validPhoto(request.resource.data);
+    }
+    // Prófílmynd má vera að hámarki um 150 kB og aðeins JPEG, PNG eða WebP
+    function validPhoto(d) {
+      return !('photo' in d)
+        || (d.photo is string && d.photo.size() < 200000 && d.photo.matches('data:image/(jpeg|png|webp);base64,.*'));
+    }
+    // Fletting á vinakóða: aðeins eitt skjal í einu, ekki listi
+    match /codes/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn() && request.resource.data.uid == me();
+      allow update, delete: if false;
+    }
+    // Fletting á netfangi: aðeins eitt skjal í einu. Hver skráir aðeins sitt eigið staðfesta netfang.
+    match /emails/{em} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn()
+        && request.auth.token.email != null
+        && em == request.auth.token.email.lower()
+        && request.resource.data.uid == me();
+      allow delete: if signedIn() && resource.data.uid == me();
+    }
+    // Vinabeiðni: skjalið heitir {viðtakandi}_{sendandi}
+    match /requests/{rid} {
+      allow read: if signedIn() && (resource.data.to == me() || resource.data.from == me());
+      allow create: if signedIn()
+        && request.resource.data.from == me()
+        && request.resource.data.to != me()
+        && rid == request.resource.data.to + '_' + me();
+      allow delete: if signedIn() && (resource.data.to == me() || resource.data.from == me());
+      allow update: if false;
+    }
+    // Vinátta: aðeins viðtakandi beiðni getur stofnað hana
+    function validFriendship(fid, d) {
+      return d.members.size() == 2
+        && d.members[0] < d.members[1]
+        && fid == d.members[0] + '_' + d.members[1]
+        && ((me() == d.members[0] && exists(/databases/$(database)/documents/requests/$(d.members[0] + '_' + d.members[1])))
+         || (me() == d.members[1] && exists(/databases/$(database)/documents/requests/$(d.members[1] + '_' + d.members[0]))));
+    }
+    match /friendships/{fid} {
+      allow read, delete: if signedIn() && me() in resource.data.members;
+      allow create: if signedIn() && validFriendship(fid, request.resource.data);
+      allow update: if false;
+    }
+
+    // ---------- Áskoranir ----------
+    match /challenges/{cid} {
+      allow read: if signedIn() && me() in resource.data.members;
+      allow create: if signedIn()
+        && request.resource.data.owner == me()
+        && me() in request.resource.data.members
+        && request.resource.data.members.size() <= 30;
+      allow update: if signedIn() && (
+        // Eigandinn má breyta öllu nema eigandanum
+        (resource.data.owner == me() && request.resource.data.owner == me())
+        // Þátttakandi uppfærir aðeins sína eigin framvindu
+        || (me() in resource.data.members
+            && onlyChanged(['progress'])
+            && request.resource.data.progress.diff(resource.data.get('progress', {})).affectedKeys().hasOnly([me()]))
+        // Þátttakandi getur hætt
+        || (me() in resource.data.members
+            && request.resource.data.members == resource.data.members.removeAll([me()])
+            && onlyChanged(['members', 'progress']))
+      );
+      allow delete: if signedIn() && resource.data.owner == me();
+    }
+  }
+}
