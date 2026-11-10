@@ -44,7 +44,7 @@
 }
 *,*::before,*::after{box-sizing:inherit}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;min-height:100vh;background:var(--bg-base);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body{margin:0;min-height:100vh;min-height:100dvh;background:var(--bg-base);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg-base)}
 .sky{position:fixed;inset:0;z-index:-1;background:
   radial-gradient(120% 70% at 10% 0%, var(--g1) 0%, transparent 60%),
@@ -64,7 +64,10 @@ button{cursor:pointer}
 .who button[aria-pressed="true"]{background:var(--solid);color:var(--solid-ink)}
 .roundbtn{width:44px;height:44px;border-radius:22px;display:grid;place-items:center;color:var(--ink);padding:0}
 
-main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+/* Pláss neðst svo síðasta efnið lendi ekki undir fljótandi flipastikunni (og upphækkaða Skrá-hnappnum) */
+/* Pláss neðst svo síðasta efnið skrunist upp fyrir flipastikuna. --tabspace er mælt með JS (stærri letur í símanum gera stikuna hærri) */
+main.wrap{padding-bottom:calc(var(--tabspace, 150px) + 28px)}
+html{scroll-padding-bottom:calc(var(--tabspace, 150px) + 12px)}
 .eyebrow{font-size:14px;color:var(--ink-2);margin-top:6px}
 h1{font-size:32px;font-weight:800;letter-spacing:-.5px;margin:0 0 14px;line-height:1.15}
 h2{font-size:19px;font-weight:800;margin:26px 0 10px}
@@ -731,6 +734,24 @@ button.kcard>span:nth-child(2){flex:1}
 .stepbtn:active{transform:scale(.94)}
 .distpre{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:12px}
 .impmerge{font-size:12px;font-weight:700;color:var(--c-swim)}
+
+/* Dagar í vikuriti eru hnappar, og breyting æfinga */
+button.wbtn{font:inherit;color:inherit;padding:0;margin:0;cursor:pointer;-webkit-appearance:none;appearance:none}
+button.wbtn.none{border:0}
+button.wbtn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+button.wbtn:active{transform:scale(.94)}
+.edhint{display:inline-grid;place-items:center;margin-right:6px;color:var(--ink-3);vertical-align:-2px}
+.editbar{display:flex;align-items:center;flex-wrap:wrap;gap:10px 12px;padding:12px 14px;border-radius:18px;margin:0 0 12px}
+.editbar > span{flex:1;min-width:150px;display:flex;flex-direction:column}
+.edate{display:flex;flex-direction:column;gap:2px;flex:none}
+.edate .in{min-height:44px;padding:6px 10px}
+.savebottom{margin-top:20px}
+
+/* Íþróttaval í fyrstu skrefunum: hlutlaust, án lita */
+.sportpick.plain .spick{padding-left:16px}
+.sportpick.plain .spick[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ink)}
+.sportpick.plain .spick .ck{display:grid;place-items:center;color:transparent;background:none}
+.sportpick.plain .spick[aria-pressed="true"] .ck{background:var(--solid);border-color:var(--solid);color:var(--solid-ink)}
 </style>
 </head>
 <body data-gate="loading">
