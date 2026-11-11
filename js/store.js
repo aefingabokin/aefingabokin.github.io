@@ -64,7 +64,11 @@ export async function createFirebaseStore(){
   return {
     configured: true,
 
-    onAuthChange(cb){ return A.onAuthStateChanged(auth, u => cb(u ? { uid: u.uid, name: u.displayName || '', email: u.email || '' } : null)); },
+    onAuthChange(cb){ return A.onAuthStateChanged(auth, u => cb(u ? { uid: u.uid, name: u.displayName || '', email: u.email || '',
+      emailVerified: !!u.emailVerified, provider: ((u.providerData || [])[0] || {}).providerId || 'password' } : null)); },
+    /* Staðfesting netfangs (aðeins fyrir aðgang með netfangi og lykilorði) */
+    resendVerification(){ return auth.currentUser ? A.sendEmailVerification(auth.currentUser) : Promise.resolve(); },
+    async refreshUser(){ if (!auth.currentUser) return false; await auth.currentUser.reload(); return !!auth.currentUser.emailVerified; },
     /* Google: sprettigluggi, en framsending ef vafrinn lokar á glugga (t.d. í sumum símum) */
     async signIn(){
       const p = new A.GoogleAuthProvider(); p.setCustomParameters({ prompt: 'select_account' });
@@ -75,6 +79,7 @@ export async function createFirebaseStore(){
     async signUpEmail(name, email, password){
       const cred = await A.createUserWithEmailAndPassword(auth, email, password);
       if (name) await A.updateProfile(cred.user, { displayName: name });
+      A.sendEmailVerification(cred.user).catch(() => {});
     },
     signInEmail(email, password){ return A.signInWithEmailAndPassword(auth, email, password); },
     resetPassword(email){ return A.sendPasswordResetEmail(auth, email); },
