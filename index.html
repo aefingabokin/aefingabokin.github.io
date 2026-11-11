@@ -752,6 +752,86 @@ button.wbtn:active{transform:scale(.94)}
 .sportpick.plain .spick[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ink)}
 .sportpick.plain .spick .ck{display:grid;place-items:center;color:transparent;background:none}
 .sportpick.plain .spick[aria-pressed="true"] .ck{background:var(--solid);border-color:var(--solid);color:var(--solid-ink)}
+
+/* Forsíða: einn dálkur í síma; röðin kemur úr order */
+.homegrid{display:flex;flex-direction:column}
+.homegrid > .hmain, .homegrid > .hside{display:contents}
+
+/* ================= Stórir skjáir: Galaxy Fold opinn, spjaldtölvur og tölvur ================= */
+/* Opinn Fold (um 700–999 px): breiðari síða og forsíðan í tveimur dálkum */
+@media (min-width: 700px){
+  .wrap{max-width:900px}
+  .homegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 20px;align-items:start}
+  .homegrid .hp-week, .homegrid .hp-invite{grid-column:1 / -1}
+  .homegrid .hpart > h2:first-child, .homegrid .hpart > .sech:first-child{margin-top:8px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kv{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .prs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  /* Skráning, stillingar og innskráning eru þægilegri í lesbreidd */
+  body[data-tab="log"] main.wrap, body[data-tab="settings"] main.wrap{max-width:760px}
+  /* Gluggar (sheets) verða að fljótandi glugga fyrir miðju */
+  .sheet{left:50%;right:auto;width:min(620px, calc(100vw - 48px));transform:translateX(-50%);bottom:24px;border-radius:26px;border:1px solid var(--glass-line);max-height:min(86vh, 820px)}
+  .sheet.open{transform:translateX(-50%)}
+}
+/* Fold opinn í landscape og breiðari skjáir: valmynd vinstra megin og þrír dálkar á forsíðu */
+@media (min-width: 1000px) and (orientation: landscape){
+  .wrap{max-width:1240px;padding:0 28px}
+  body[data-gate="app"]{padding-left:108px}
+  .top .wrap{max-width:1240px}
+  .tabs{left:16px;top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column;gap:6px;padding:10px 6px;border-radius:30px}
+  .tabs button{min-width:76px;height:60px}
+  .tabs button.tab-log{order:-1;height:76px;margin-bottom:6px}
+  .tabs button.tab-log .plus{margin-top:0}
+  main.wrap{padding-bottom:48px}
+  html{scroll-padding-bottom:24px}
+  /* Aðaldálkur (vikurit, tölur, síðustu æfingar) og hliðardálkur (markmið, hrós, met), hvor flæðir óháð hinum */
+  .homegrid{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:0 24px;align-items:start}
+  .homegrid > .hmain, .homegrid > .hside{display:flex;flex-direction:column;min-width:0}
+  .homegrid .hpart{grid-column:auto}
+  .homegrid .hp-stats .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .hside > .hpart:first-child > .glass:first-child, .hside > .hpart:first-child > h2:first-child{margin-top:0}
+  .hp-recent .list, body[data-tab="history"] .list:not(.pick){display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hp-recent .list > li, body[data-tab="history"] .list:not(.pick) > li{border-top:1px solid var(--hair)}
+  .kv{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .prs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .netbar{left:124px}
+  body[data-tab="log"] main.wrap, body[data-tab="settings"] main.wrap{max-width:820px}
+  /* Markmið, vinalisti og met í tveimur dálkum */
+  main .glist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  main .glist > .gcard{margin:0}
+  body[data-tab="friends"] .flist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  body[data-tab="friends"] .flist > li{border-top:1px solid var(--hair)}
+}
+
+/* Skrá-hnappurinn: hringurinn lyftist upp fyrir stikuna og textinn fær sitt pláss undir honum */
+.tabs button.tab-log{justify-content:flex-end;gap:4px;padding-bottom:5px;overflow:visible}
+.tabs button.tab-log .plus{margin-top:-30px;flex:none}
+@media (min-width: 1000px) and (orientation: landscape){
+  .tabs button.tab-log{justify-content:center;padding-bottom:0;height:84px}
+  .tabs button.tab-log .plus{margin-top:0}
+}
+/* Litaþemu íþrótta: valið í Stillingum. Eiga við rótina og forskoðanir í stillingum. */
+[data-sportpal="orka"]{--c-lift:#1141D0;--c-run:#D02111;--c-walk:#4FAA0E;--c-hike:#D07711;--c-swim:#11C0D0;--c-bike:#AA900E;--c-ski:#1180D0;--c-class:#D01180;--c-yoga:#11D080;--c-ball:#83AA0E;--c-racket:#7011D0;--c-golf:#11D041;--c-row:#2111D0;--c-climb:#D05011;--c-combat:#D01131;--c-dance:#D011D0;--c-other:#695C84}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-sportpal="orka"], :root:not([data-theme="light"]) [data-sportpal="orka"]{--c-lift:#7B99F4;--c-run:#F4857B;--c-walk:#9CF25F;--c-hike:#F4BC7B;--c-swim:#7BEAF4;--c-bike:#F2D95F;--c-ski:#7BC2F4;--c-class:#F47BC2;--c-yoga:#7BF4C2;--c-ball:#CDF25F;--c-racket:#B87BF4;--c-golf:#7BF499;--c-row:#857BF4;--c-climb:#F4A37B;--c-combat:#F47B8F;--c-dance:#F47BF4;--c-other:#B3ABC4}}
+:root[data-theme="dark"][data-sportpal="orka"], :root[data-theme="dark"] [data-sportpal="orka"]{--c-lift:#7B99F4;--c-run:#F4857B;--c-walk:#9CF25F;--c-hike:#F4BC7B;--c-swim:#7BEAF4;--c-bike:#F2D95F;--c-ski:#7BC2F4;--c-class:#F47BC2;--c-yoga:#7BF4C2;--c-ball:#CDF25F;--c-racket:#B87BF4;--c-golf:#7BF499;--c-row:#857BF4;--c-climb:#F4A37B;--c-combat:#F47B8F;--c-dance:#F47BF4;--c-other:#B3ABC4}
+[data-sportpal="nordurljos"]{--c-lift:#6322BF;--c-run:#BF2270;--c-walk:#22BF56;--c-hike:#22BF97;--c-swim:#22BFBF;--c-bike:#519C1C;--c-ski:#228ABF;--c-class:#BF22BF;--c-yoga:#22BF7D;--c-ball:#22BF22;--c-racket:#9722BF;--c-golf:#22BF70;--c-row:#2263BF;--c-climb:#BF2256;--c-combat:#BF223C;--c-dance:#BF2297;--c-other:#5C5C84}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-sportpal="nordurljos"], :root:not([data-theme="light"]) [data-sportpal="nordurljos"]{--c-lift:#AF86EA;--c-run:#EA86B8;--c-walk:#86EAA7;--c-hike:#86EAD1;--c-swim:#86EAEA;--c-bike:#9EE56C;--c-ski:#86C8EA;--c-class:#EA86EA;--c-yoga:#86EAC0;--c-ball:#86EA86;--c-racket:#D186EA;--c-golf:#86EAB8;--c-row:#86AFEA;--c-climb:#EA86A7;--c-combat:#EA8696;--c-dance:#EA86D1;--c-other:#ABABC4}}
+:root[data-theme="dark"][data-sportpal="nordurljos"], :root[data-theme="dark"] [data-sportpal="nordurljos"]{--c-lift:#AF86EA;--c-run:#EA86B8;--c-walk:#86EAA7;--c-hike:#86EAD1;--c-swim:#86EAEA;--c-bike:#9EE56C;--c-ski:#86C8EA;--c-class:#EA86EA;--c-yoga:#86EAC0;--c-ball:#86EA86;--c-racket:#D186EA;--c-golf:#86EAB8;--c-row:#86AFEA;--c-climb:#EA86A7;--c-combat:#EA8696;--c-dance:#EA86D1;--c-other:#ABABC4}
+[data-sportpal="solarlag"]{--c-lift:#CA1634;--c-run:#CA4C16;--c-walk:#A57412;--c-hike:#CA6A16;--c-swim:#CA1670;--c-bike:#A58D12;--c-ski:#8E16CA;--c-class:#CA169D;--c-yoga:#CA3416;--c-ball:#A58112;--c-racket:#CA7016;--c-golf:#A5A512;--c-row:#CA16CA;--c-climb:#CA5816;--c-combat:#CA1616;--c-dance:#CA167F;--c-other:#705C84}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-sportpal="solarlag"], :root:not([data-theme="light"]) [data-sportpal="solarlag"]{--c-lift:#F17E92;--c-run:#F1A17E;--c-walk:#EEBF63;--c-hike:#F1B47E;--c-swim:#F17EB8;--c-bike:#EED763;--c-ski:#CB7EF1;--c-class:#F17ED4;--c-yoga:#F1927E;--c-ball:#EECB63;--c-racket:#F1B87E;--c-golf:#EEEE63;--c-row:#F17EF1;--c-climb:#F1A87E;--c-combat:#F17E7E;--c-dance:#F17EC1;--c-other:#B8ABC4}}
+:root[data-theme="dark"][data-sportpal="solarlag"], :root[data-theme="dark"] [data-sportpal="solarlag"]{--c-lift:#F17E92;--c-run:#F1A17E;--c-walk:#EEBF63;--c-hike:#F1B47E;--c-swim:#F17EB8;--c-bike:#EED763;--c-ski:#CB7EF1;--c-class:#F17ED4;--c-yoga:#F1927E;--c-ball:#EECB63;--c-racket:#F1B87E;--c-golf:#EEEE63;--c-row:#F17EF1;--c-climb:#F1A87E;--c-combat:#F17E7E;--c-dance:#F17EC1;--c-other:#B8ABC4}
+[data-sportpal="jokull"]{--c-lift:#3E5FA3;--c-run:#A3463E;--c-walk:#3EA370;--c-hike:#A3793E;--c-swim:#3E92A3;--c-bike:#857032;--c-ski:#3E79A3;--c-class:#A33E70;--c-yoga:#3EA389;--c-ball:#558532;--c-racket:#A3683E;--c-golf:#3EA35F;--c-row:#3E46A3;--c-climb:#A35F3E;--c-combat:#A33E46;--c-dance:#A33EA3;--c-other:#5C6384}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-sportpal="jokull"], :root:not([data-theme="light"]) [data-sportpal="jokull"]{--c-lift:#97ADD8;--c-run:#D89D97;--c-walk:#97D8B8;--c-hike:#D8BD97;--c-swim:#97CDD8;--c-bike:#CFBC81;--c-ski:#97BDD8;--c-class:#D897B8;--c-yoga:#97D8C8;--c-ball:#A2CF81;--c-racket:#D8B297;--c-golf:#97D8AD;--c-row:#979DD8;--c-climb:#D8AD97;--c-combat:#D8979D;--c-dance:#D897D8;--c-other:#ABAFC4}}
+:root[data-theme="dark"][data-sportpal="jokull"], :root[data-theme="dark"] [data-sportpal="jokull"]{--c-lift:#97ADD8;--c-run:#D89D97;--c-walk:#97D8B8;--c-hike:#D8BD97;--c-swim:#97CDD8;--c-bike:#CFBC81;--c-ski:#97BDD8;--c-class:#D897B8;--c-yoga:#97D8C8;--c-ball:#A2CF81;--c-racket:#D8B297;--c-golf:#97D8AD;--c-row:#979DD8;--c-climb:#D8AD97;--c-combat:#D8979D;--c-dance:#D897D8;--c-other:#ABAFC4}
+.sppal{display:flex;flex-direction:column;gap:8px;padding:0 12px 12px}
+.spopt{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--glass-line);background:var(--field);border-radius:16px;padding:10px 14px;color:var(--ink);min-height:56px}
+.spopt[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--ink);background:var(--glass)}
+.spopt .sw{display:flex;gap:4px;flex:none}
+.spopt .sw i{width:18px;height:28px;border-radius:6px;display:block}
+.spopt > span:last-child{display:flex;flex-direction:column}
+[data-sportpal="classic"]{--c-lift:#2F62D8;--c-run:#D2551A;--c-walk:#3E8E2E;--c-swim:#0B8FA6;--c-bike:#A87A00;--c-other:#7A55C4;--c-hike:#7A5A2B;--c-ski:#3D6FA8;--c-class:#B0306A;--c-yoga:#5E8A68;--c-ball:#55761C;--c-racket:#B4620A;--c-golf:#0F7B5F;--c-row:#1F5F8B;--c-climb:#8B5A3C;--c-combat:#A12C2C;--c-dance:#A23A92}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) [data-sportpal="classic"]{--c-lift:#86B3FF;--c-run:#FFA36B;--c-walk:#A6E37A;--c-swim:#6FE3F0;--c-bike:#F5D06B;--c-other:#D2B5FF;--c-hike:#D6B27A;--c-ski:#9CC3F0;--c-class:#F07AB0;--c-yoga:#A9D0B0;--c-ball:#B8DB6E;--c-racket:#FFB066;--c-golf:#5ED3AE;--c-row:#7CC4F0;--c-climb:#E3A783;--c-combat:#F59292;--c-dance:#EBA0DD}}
+:root[data-theme="dark"] [data-sportpal="classic"]{--c-lift:#86B3FF;--c-run:#FFA36B;--c-walk:#A6E37A;--c-swim:#6FE3F0;--c-bike:#F5D06B;--c-other:#D2B5FF;--c-hike:#D6B27A;--c-ski:#9CC3F0;--c-class:#F07AB0;--c-yoga:#A9D0B0;--c-ball:#B8DB6E;--c-racket:#FFB066;--c-golf:#5ED3AE;--c-row:#7CC4F0;--c-climb:#E3A783;--c-combat:#F59292;--c-dance:#EBA0DD}
 </style>
 </head>
 <body data-gate="loading">
