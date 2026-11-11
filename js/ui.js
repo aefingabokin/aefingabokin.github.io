@@ -398,6 +398,8 @@ function render(){
   (window.requestAnimationFrame || setTimeout)(() => { if (typeof measureTabs === 'function') measureTabs(); });
   pendingRender = false;
   document.body.dataset.gate = gate;
+  document.body.dataset.tab = ui.tab || 'home';
+  document.body.dataset.editing = draft && ui.tab === 'log' ? '1' : '0';
   if (gate !== 'app') return renderGate();
   if (settings.tabsHidden.includes(ui.tab)) ui.tab = 'home';
   const who = $('#who');
@@ -562,17 +564,23 @@ function renderHome(){
   };
   /* Röð og sýnileiki spjalda kemur úr stillingum */
   /* Skráð er með hnappinum fyrir miðju í flipastikunni, svo enginn sér hnappur á forsíðunni */
-  let html = '';
-  settings.homeCards.filter(id => !settings.homeHidden.includes(id)).forEach(id => {
-    html += parts[id] || '';
+  /* Á breiðum skjá (t.d. opinn Fold á hlið) fara stóru spjöldin í aðaldálk og hin í hliðardálk.
+     order heldur röðinni sem notandinn valdi þegar allt er í einum dálki. */
+  const SIDE = ['goals', 'kudos', 'prs'];
+  let mainHtml = '', sideHtml = '';
+  settings.homeCards.filter(id => !settings.homeHidden.includes(id)).forEach((id, i) => {
+    if (!parts[id]) return;
+    const h = `<div class="hpart hp-${id}" style="order:${i}">${parts[id]}</div>`;
+    if (SIDE.includes(id)) sideHtml += h; else mainHtml += h;
   });
   view.innerHTML = `
-    <div class="eyebrow">${DAYSFULL[now.getDay()]} ${now.getDate()}. ${MONFULL[now.getMonth()]}</div>
-    <h1>${title}</h1>
-    ${state.profiles.length < 2 ? `<div class="glass" style="padding:16px;margin-bottom:12px"><b>Bjóddu maka að vera með.</b>
+    <div class="hhead"><div class="eyebrow">${DAYSFULL[now.getDay()]} ${now.getDate()}. ${MONFULL[now.getMonth()]}</div>
+    <h1>${title}</h1></div>
+    <div class="homegrid"><div class="hmain">
+    ${state.profiles.length < 2 ? `<div class="hpart hp-invite" style="order:-1"><div class="glass" style="padding:16px;margin-bottom:12px"><b>Bjóddu maka að vera með.</b>
       <p class="muted" style="margin:4px 0 10px">Makinn sér allt og getur skráð fyrir ykkur bæði. Vinum bætirðu við í Vinir-flipanum.</p>
-      <button class="btn primary" data-act="invite">Senda boðshlekk</button></div>` : ''}
-    ${html}`;
+      <button class="btn primary" data-act="invite">Senda boðshlekk</button></div></div>` : ''}
+    ${mainHtml}</div><div class="hside">${sideHtml}</div></div>`;
 }
 function kudosCard(){
   if (state.active !== me.uid) return '';
@@ -2741,6 +2749,14 @@ function settingItem(it){
     <input type="checkbox" class="switch" data-settoggle="${it.key}" data-on="${it.on}" data-off="${it.off}" ${settings[it.key] === it.on ? 'checked' : ''}></label>`;
   if (it.type === 'number') return `<div class="srow"><label for="set_${it.key}" style="flex:1"><b style="font-weight:600">${it.label}</b>${hint}</label>
     <input class="in" id="set_${it.key}" data-setnum="${it.key}" inputmode="numeric" placeholder="${it.placeholder || ''}" value="${settings[it.key] ?? ''}" style="max-width:120px;text-align:center"></div>`;
+  if (it.type === 'sportpal'){
+    const opts = [['classic', 'Klassískt', 'Rólegir, skýrir litir'], ['orka', 'Orka', 'Sterkir og líflegir litir'], ['nordurljos', 'Norðurljós', 'Grænt, blágrænt, fjólublátt og bleikt'],
+      ['solarlag', 'Sólarlag', 'Hlýir litir: rauðir, appelsínugulir og bleikir'], ['jokull', 'Jökull', 'Mildir og hógværir litir']];
+    const show = [...new Set([...settings.sports, 'lift', 'run', 'swim', 'walk', 'hike', 'bike'])].filter(k => TYPES[k]).slice(0, 6);
+    return `<div class="sitem"><div class="slabel">${it.label}<div class="tiny">${it.hint}</div></div><div class="sppal" role="radiogroup" aria-label="${it.label}">
+      ${opts.map(([v, n, d]) => `<button class="spopt" role="radio" data-set="sportPalette" data-val="${v}" aria-pressed="${settings.sportPalette === v}" aria-checked="${settings.sportPalette === v}" data-sportpal="${v}">
+        <span class="sw" aria-hidden="true">${show.map(k => `<i style="background:var(--c-${k})"></i>`).join('')}</span><span><b>${n}</b><span class="tiny">${d}</span></span></button>`).join('')}</div></div>`;
+  }
   if (it.type === 'weekstyle'){
     const sample = [[{ type: 'lift', durationMin: 58 }], [{ type: 'run', distance: 5.2, durationMin: 29 }], [], [{ type: 'swim', distance: 1000, durationMin: 25 }, { type: 'lift', durationMin: 45 }]];
     const names = { A: 'Lituð tákn', B: 'Hringir', C: 'Ljóst', D: 'Með tölum' }, keep = settings.weekStyle;
@@ -2948,7 +2964,7 @@ async function loadSettings(){
   } catch(e){ console.warn('settings', e); }
 }
 function setSetting(key, value){
-  if (['weekStyle', 'palette', 'theme'].includes(key)) trackAppearance(key, settings[key], value);
+  if (['weekStyle', 'palette', 'theme', 'sportPalette'].includes(key)) trackAppearance(key, settings[key], value);
   settings = normalize({ ...settings, [key]: value }); commitSettings();
 }
 function commitSettings(){
@@ -3222,6 +3238,7 @@ $('#settingsBtn').addEventListener('click', openSettings);
    svo hægt sé að skruna öllu efni upp fyrir hana, líka þegar letur er stækkað í stillingum símans */
 function measureTabs(){
   const t = document.querySelector('.tabs'); if (!t) return;
+  if (window.matchMedia && window.matchMedia('(min-width: 1000px) and (orientation: landscape)').matches){ document.documentElement.style.setProperty('--tabspace', '0px'); return; }
   const r = t.getBoundingClientRect();
   const raised = t.querySelector('.tab-log .plus'), top = raised ? Math.min(r.top, raised.getBoundingClientRect().top) : r.top;
   const space = r.height && getComputedStyle(t).display !== 'none' ? Math.ceil(window.innerHeight - top) : 0;
