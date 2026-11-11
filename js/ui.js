@@ -143,17 +143,37 @@ function weekCell(list, isToday, who, day, pid){
   if (pid) return weekCellBase(list, isToday, who, day).replace(/^<div class="/, `<button type="button" data-wday="${esc(pid)}|${day}" class="wbtn `).replace(/<\/div>$/, '</button>');
   return weekCellBase(list, isToday, who, day);
 }
+/* Útlit vikurits: dots (sjálfgefið), bars, tiles og rings. Súluritið er teiknað í renderHome; annars staðar birtist það sem punktar. */
+const weekStyleOf = () => ['dots', 'bars', 'tiles', 'rings'].includes(settings.weekStyle) ? settings.weekStyle : 'dots';
+const cellStyleOf = () => weekStyleOf() === 'bars' ? 'dots' : weekStyleOf();
+const sessSets = a => (a.exercises || []).reduce((n, e) => n + (e.sets || []).length, 0);
+const minsOf = a => a.durationMin || (a.type === 'lift' ? Math.min(90, 15 + sessSets(a) * 3) : kmOf(a) ? kmOf(a) * 6 : 30);
 function weekCellBase(list, isToday, who, day){
-  const st = settings.weekStyle || 'A', cls = `wc wc-${st}${isToday ? ' today' : ''}${list.length ? '' : ' none'}${list.length > 1 ? ' multi' : ''}`;
+  const st = cellStyleOf();
+  const cls = `wc wc-${st}${isToday ? ' today' : ''}${list.length ? '' : ' none'}${list.length > 1 ? ' multi' : ''}`;
   const tip = `${who}, ${fmtDate(day)}${list.length ? ': ' + list.map(a => titleOf(a)).join(', ') : ''}`;
   if (!list.length) return `<div class="${cls}" title="${esc(tip)}"></div>`;
-  const k = a => TYPES[a.type] ? a.type : 'other', items = list.slice(0, st === 'B' ? 3 : 2), more = list.length - items.length;
-  const icons = (fill) => items.map(a => `<span style="${fill ? 'background' : 'color'}:${tc(k(a))}">${sportIcon(k(a), list.length > 1 && st !== 'B' ? 14 : 17)}</span>`).join('');
+  const k = a => TYPES[a.type] ? a.type : 'other', items = list.slice(0, 2), more = list.length - items.length;
   const extra = more > 0 ? `<em>+${more}</em>` : '';
-  if (st === 'A') return `<div class="${cls}" title="${esc(tip)}">${icons(true)}${extra}</div>`;
-  if (st === 'B') return `<div class="${cls}" title="${esc(tip)}">${icons(true)}${extra}</div>`;
-  if (st === 'C') return `<div class="${cls}" style="--wc:${tc(k(items[0]))}" title="${esc(tip)}">${icons(false)}${extra}</div>`;
-  return `<div class="${cls}" style="--wc:${tc(k(items[0]))}" title="${esc(tip)}"><span class="ic">${icons(false)}</span><small>${esc(cellLabel(list))}</small></div>`;
+  if (st === 'dots') return `<div class="${cls}" title="${esc(tip)}">${items.map(a => `<span class="dot" style="--k:${tc(k(a))}">${sportIcon(k(a), list.length > 1 ? 13 : 16)}</span>`).join('')}${extra}</div>`;
+  if (st === 'tiles') return `<div class="${cls}" title="${esc(tip)}">${items.map(a => `<span class="tl" style="--k:${tc(k(a))}">${sportIcon(k(a), list.length > 1 ? 12 : 15)}<b>${esc(cellLabel([a]))}</b></span>`).join('')}${extra}</div>`;
+  /* rings: hringur sem fyllist upp í 60 mínútur, tveir hringir ef tvær æfingar */
+  const R = [20, 12.5], C = r => 2 * Math.PI * r;
+  const svg = `<svg viewBox="0 0 48 48" aria-hidden="true">${items.map((a, i) => { const r = R[i], L = C(r), f = Math.min(1, minsOf(a) / 60);
+    return `<circle cx="24" cy="24" r="${r}" class="trk"/><circle cx="24" cy="24" r="${r}" class="arc" style="stroke:${tc(k(a))}" stroke-dasharray="${(L * f).toFixed(1)} ${L.toFixed(1)}" transform="rotate(-90 24 24)"/>`; }).join('')}</svg>`;
+  return `<div class="${cls}" title="${esc(tip)}">${svg}${list.length === 1 ? `<span class="ri" style="color:${tc(k(items[0]))}">${sportIcon(k(items[0]), 13)}</span>` : ''}${extra}</div>`;
+}
+/* Súlurit: ein súla á mann á dag, hæð eftir mínútum, lituð eftir íþróttum */
+function weekBars(days, t){
+  const per = days.map(d => state.profiles.map(p => state.sessions.filter(x => x.profileId === p.id && x.date === d)));
+  const maxM = Math.max(60, ...per.flat().map(l => l.reduce((a, x) => a + minsOf(x), 0)));
+  const H = 120, k = a => TYPES[a.type] ? a.type : 'other';
+  return `<div class="wbars"><div></div>${days.map((d, di) => `<div class="wbcol ${d === t ? 'today' : ''}">${state.profiles.map((p, pi) => {
+    const l = per[di][pi], tot = Math.round(l.reduce((a, x) => a + minsOf(x), 0));
+    return `<button type="button" class="wbar" data-wday="${esc(p.id)}|${d}" aria-label="${esc(pname(p.id))}, ${fmtDate(d)}: ${l.length ? esc(l.map(x => titleOf(x)).join(', ')) : 'engin æfing'}">
+      <span class="wbt">${tot ? `${tot}′` : ''}</span>
+      <span class="wbb" style="height:${Math.max(6, Math.round(tot / maxM * H))}px">${l.slice().reverse().map(x => `<i style="flex:${Math.max(1, Math.round(minsOf(x)))};background:${tc(k(x))}"></i>`).join('')}</span>
+      ${avatar(p.id, 18, pname(p.id))}</button>`; }).join('')}</div>`).join('')}</div>`;
 }
 const legendHtml = types => `<div class="legend">${types.map(k => `<span class="lg"><b style="color:${tc(k)}">${sportIcon(k, 14)}</b>${TYPES[k].name}</span>`).join('')}</div>`;
 const INTENSITY = { light: 'Létt', mod: 'Miðlungs', hard: 'Erfitt' };
@@ -542,10 +562,12 @@ function renderHome(){
   }).filter(Boolean);
 
   const parts = {
-    week: `<section class="glass week">
+    week: `<section class="glass week ws-${weekStyleOf()}">
       <div class="week-head"><b>${bothCount} ${state.profiles.length > 1 ? 'æfingar hjá ykkur' : 'æfingar'}</b>
         <div class="navbtns"><button data-act="wprev" aria-label="Fyrri vika">${ICON.l}</button><button data-act="wnext" aria-label="Næsta vika" ${ui.weekOffset >= 0 ? 'disabled' : ''}>${ICON.r}</button></div></div>
-      <div class="week-grid"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}${rows}</div>
+      ${weekStyleOf() === 'bars'
+        ? `<div class="week-grid nobars"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}</div>${weekBars(days, t)}`
+        : `<div class="week-grid"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}${rows}</div>`}
       ${legendHtml(used.length ? used : Object.keys(TYPES).filter(k => sportOn(k)))}
     </section>`,
     stats: `<div class="sech"><b>${state.active === me.uid ? 'Vikan þín í tölum' : `Vikan hjá ${esc(pname(state.active))} í tölum`}</b>
@@ -1300,7 +1322,7 @@ function friendsWeek(){
   const feed = [...others.flatMap(u => actsOf(u).filter(a => a.date >= since).map(a => ({ ...a, ownerId: u }))),
     ...others.flatMap(u => (goalsBy[u] || []).filter(g => g.status === 'achieved' && g.achievedAt >= since).map(g => ({ kind: 'goal', ownerId: u, date: g.achievedAt, g })))]
     .sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
-  return `<section class="glass week">
+  return `<section class="glass week ws-${cellStyleOf()}">
       <div class="week-head"><b>${ui.fWeekOffset === 0 ? 'Þessi vika' : `Vika ${ws.getDate()}. ${MON[ws.getMonth()]}`}</b>
         <div class="navbtns"><button data-act="fwprev" aria-label="Fyrri vika">${ICON.l}</button><button data-act="fwnext" aria-label="Næsta vika" ${ui.fWeekOffset >= 0 ? 'disabled' : ''}>${ICON.r}</button></div></div>
       <div class="week-grid"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}${rows}</div>
@@ -2750,7 +2772,7 @@ function settingItem(it){
   if (it.type === 'number') return `<div class="srow"><label for="set_${it.key}" style="flex:1"><b style="font-weight:600">${it.label}</b>${hint}</label>
     <input class="in" id="set_${it.key}" data-setnum="${it.key}" inputmode="numeric" placeholder="${it.placeholder || ''}" value="${settings[it.key] ?? ''}" style="max-width:120px;text-align:center"></div>`;
   if (it.type === 'sportpal'){
-    const opts = [['classic', 'Klassískt', 'Rólegir, skýrir litir'], ['orka', 'Orka', 'Sterkir og líflegir litir'], ['nordurljos', 'Norðurljós', 'Grænt, blágrænt, fjólublátt og bleikt'],
+    const opts = [['classic', 'Klassískt', 'Rólegir, skýrir litir'], ['hraun', 'Hraun og ís', 'Íslensk náttúra: hraun, jökull, mosi og hverir'], ['orka', 'Orka', 'Sterkir og líflegir litir'], ['nordurljos', 'Norðurljós', 'Grænt, blágrænt, fjólublátt og bleikt'],
       ['solarlag', 'Sólarlag', 'Hlýir litir: rauðir, appelsínugulir og bleikir'], ['jokull', 'Jökull', 'Mildir og hógværir litir']];
     const show = [...new Set([...settings.sports, 'lift', 'run', 'swim', 'walk', 'hike', 'bike'])].filter(k => TYPES[k]).slice(0, 6);
     return `<div class="sitem"><div class="slabel">${it.label}<div class="tiny">${it.hint}</div></div><div class="sppal" role="radiogroup" aria-label="${it.label}">
@@ -2758,11 +2780,13 @@ function settingItem(it){
         <span class="sw" aria-hidden="true">${show.map(k => `<i style="background:var(--c-${k})"></i>`).join('')}</span><span><b>${n}</b><span class="tiny">${d}</span></span></button>`).join('')}</div></div>`;
   }
   if (it.type === 'weekstyle'){
-    const sample = [[{ type: 'lift', durationMin: 58 }], [{ type: 'run', distance: 5.2, durationMin: 29 }], [], [{ type: 'swim', distance: 1000, durationMin: 25 }, { type: 'lift', durationMin: 45 }]];
-    const names = { A: 'Lituð tákn', B: 'Hringir', C: 'Ljóst', D: 'Með tölum' }, keep = settings.weekStyle;
-    const opts = ['A', 'B', 'C', 'D'].map(v => { settings.weekStyle = v;
-      const cells = sample.map((l, i) => weekCell(l, i === 1, '', today())).join(''); settings.weekStyle = keep;
-      return `<button class="wsopt" data-set="weekStyle" data-val="${v}" aria-pressed="${keep === v}"><span class="wsprev">${cells}</span><b>${v}</b><span class="tiny">${names[v]}</span></button>`; }).join('');
+    const sample = [[{ type: 'lift', durationMin: 58 }], [{ type: 'run', distance: 5.2, durationMin: 29 }], [], [{ type: 'run', distance: 3.1, durationMin: 22 }, { type: 'swim', distance: 800, durationMin: 25 }]];
+    const names = { dots: 'Punktar', bars: 'Súlurit', tiles: 'Flísar', rings: 'Hringir' }, keep = settings.weekStyle;
+    const opts = ['dots', 'bars', 'tiles', 'rings'].map(v => {
+      let prev;
+      if (v === 'bars') prev = `<span class="wsbars">${[[58, 'lift'], [29, 'run'], [0, 'run'], [47, 'swim']].map(([m, k]) => `<i style="height:${Math.max(4, Math.round(m / 60 * 30))}px;background:${tc(k)}"></i>`).join('')}</span>`;
+      else { settings.weekStyle = v; prev = sample.map((l, i) => weekCell(l, i === 1, '', today())).join(''); settings.weekStyle = keep; }
+      return `<button class="wsopt" data-set="weekStyle" data-val="${v}" aria-pressed="${weekStyleOf() === v}"><span class="wsprev ws-${v}">${prev}</span><b>${names[v]}</b><span class="tiny">${v === 'dots' ? 'Sjálfgefið' : '&nbsp;'}</span></button>`; }).join('');
     return `<div class="sitem"><div class="slabel">${it.label}${hint}</div><div class="wsgrid">${opts}</div></div>`;
   }
   if (it.type === 'palette'){
