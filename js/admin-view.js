@@ -163,6 +163,8 @@ export function renderDashboard(el, m, opt = {}){
 
   <div class="agrid4">
     <section class="glass acard"><h2>Úr úrum</h2>${bars(sorted(T.imports), k => SOURCES[k] || k, () => 'var(--c-row)')}</section>
+    <section class="glass acard"><h2>Æfingaplan</h2><p class="tiny">Hvað fólk lætur appið setja upp</p>${bars(sorted(T.plans).slice(0, 8), k => k.split('+').map(g => ({ chest: 'Brjóst', back: 'Bak', legs: 'Fætur', glutes: 'Rass og aftanlæri', shoulders: 'Axlir', arms: 'Hendur', core: 'Kviður', full: 'Allur líkaminn', upper: 'Efri hluti', lower: 'Neðri hluti', push: 'Push', pull: 'Pull' }[g] || g)).join(' + '), () => 'var(--c-lift)')}
+      <p class="tiny">Markmið:</p>${bars(sorted(T.planGoal), k => ({ strength: 'Styrkur', pump: 'Pump', endurance: 'Þol' }[k] || k), () => 'var(--c-run)')}</section>
     <section class="glass acard"><h2>CrossFit: personal best</h2><p class="tiny">Í hverju fólk skráir PB oftast</p>${bars(sorted(T.cfPbs).slice(0, 10), k => k, () => 'var(--c-class)')}</section>
     <section class="glass acard"><h2>Vinsælustu sundlaugarnar</h2><p class="tiny">Skráðar sundferðir eftir laug</p>${bars(sorted(T.pools).slice(0, 10), k => k, () => 'var(--c-swim)')}</section>
     <section class="glass acard"><h2>Gufa og pottar</h2><p class="tiny">Æfingar þar sem farið var í</p>${bars(sorted(T.spa), k => SPA[k] || k, () => 'var(--c-swim)')}</section>
