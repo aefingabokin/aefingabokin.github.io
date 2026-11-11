@@ -754,7 +754,9 @@ button.wbtn:active{transform:scale(.94)}
 .sportpick.plain .spick[aria-pressed="true"] .ck{background:var(--solid);border-color:var(--solid);color:var(--solid-ink)}
 
 /* Forsíða: einn dálkur í síma; röðin kemur úr order */
-.homegrid{display:flex;flex-direction:column}
+.homegrid{display:flex;flex-direction:column;gap:12px}
+.homegrid .hpart > .installcard.home{margin:0}
+.homegrid .hpart > .installcard:not(:last-child), .homegrid .hpart > .kcard:not(:last-child){margin-bottom:12px}
 .homegrid > .hmain, .homegrid > .hside{display:contents}
 
 /* ================= Stórir skjáir: Galaxy Fold opinn, spjaldtölvur og tölvur ================= */
@@ -832,6 +834,82 @@ button.wbtn:active{transform:scale(.94)}
 [data-sportpal="classic"]{--c-lift:#2F62D8;--c-run:#D2551A;--c-walk:#3E8E2E;--c-swim:#0B8FA6;--c-bike:#A87A00;--c-other:#7A55C4;--c-hike:#7A5A2B;--c-ski:#3D6FA8;--c-class:#B0306A;--c-yoga:#5E8A68;--c-ball:#55761C;--c-racket:#B4620A;--c-golf:#0F7B5F;--c-row:#1F5F8B;--c-climb:#8B5A3C;--c-combat:#A12C2C;--c-dance:#A23A92}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) [data-sportpal="classic"]{--c-lift:#86B3FF;--c-run:#FFA36B;--c-walk:#A6E37A;--c-swim:#6FE3F0;--c-bike:#F5D06B;--c-other:#D2B5FF;--c-hike:#D6B27A;--c-ski:#9CC3F0;--c-class:#F07AB0;--c-yoga:#A9D0B0;--c-ball:#B8DB6E;--c-racket:#FFB066;--c-golf:#5ED3AE;--c-row:#7CC4F0;--c-climb:#E3A783;--c-combat:#F59292;--c-dance:#EBA0DD}}
 :root[data-theme="dark"] [data-sportpal="classic"]{--c-lift:#86B3FF;--c-run:#FFA36B;--c-walk:#A6E37A;--c-swim:#6FE3F0;--c-bike:#F5D06B;--c-other:#D2B5FF;--c-hike:#D6B27A;--c-ski:#9CC3F0;--c-class:#F07AB0;--c-yoga:#A9D0B0;--c-ball:#B8DB6E;--c-racket:#FFB066;--c-golf:#5ED3AE;--c-row:#7CC4F0;--c-climb:#E3A783;--c-combat:#F59292;--c-dance:#EBA0DD}
+/* Hraun og ís: basalt, hraun, jökull, mosi, hverir */
+[data-sportpal="hraun"]{--c-lift:#3D4A5C;--c-run:#E4572E;--c-walk:#6A994E;--c-hike:#E07B1F;--c-swim:#3F93C4;--c-bike:#2A9D8F;--c-ski:#5B7FA6;--c-class:#C2410C;--c-yoga:#6F9480;--c-ball:#7D8C2F;--c-racket:#C46A08;--c-golf:#3F7D52;--c-row:#2F6F8F;--c-climb:#8B5E3C;--c-combat:#9B2C2C;--c-dance:#A2557A;--c-other:#6B7280}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"])[data-sportpal="hraun"], :root:not([data-theme="light"]) [data-sportpal="hraun"]{--c-lift:#9AA8BC;--c-run:#FF8A65;--c-walk:#A5CF86;--c-hike:#FFB366;--c-swim:#8CCBF0;--c-bike:#6FD3C5;--c-ski:#A9C1DD;--c-class:#FB8F5B;--c-yoga:#B5D1BF;--c-ball:#C9D67A;--c-racket:#FBBF5A;--c-golf:#8CCB9E;--c-row:#7FB8D6;--c-climb:#D2A27F;--c-combat:#F08080;--c-dance:#E2A1C1;--c-other:#B4BAC4}}
+:root[data-theme="dark"][data-sportpal="hraun"], :root[data-theme="dark"] [data-sportpal="hraun"]{--c-lift:#9AA8BC;--c-run:#FF8A65;--c-walk:#A5CF86;--c-hike:#FFB366;--c-swim:#8CCBF0;--c-bike:#6FD3C5;--c-ski:#A9C1DD;--c-class:#FB8F5B;--c-yoga:#B5D1BF;--c-ball:#C9D67A;--c-racket:#FBBF5A;--c-golf:#8CCB9E;--c-row:#7FB8D6;--c-climb:#D2A27F;--c-combat:#F08080;--c-dance:#E2A1C1;--c-other:#B4BAC4}
+
+/* Bil milli spjalda á forsíðu á breiðum skjám, svo þau rekist ekki saman */
+@media (min-width: 700px){
+  .homegrid{row-gap:14px}
+  .homegrid .hpart > .installcard.home{margin:0}
+  .homegrid .hpart > .kcard:not(:last-child), .homegrid .hpart > .installcard:not(:last-child){margin-bottom:12px}
+}
+@media (min-width: 1000px) and (orientation: landscape){
+  .homegrid > .hmain, .homegrid > .hside{gap:14px}
+}
+
+/* ================= Vikurit 2.0: punktar, súlurit, flísar og hringir ================= */
+:root{--tile-ink:#FFFFFF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tile-ink:#0B1520}}
+:root[data-theme="dark"]{--tile-ink:#0B1520}
+/* Punktar (sjálfgefið): hringlaga tákn með útlínu, lítill punktur fyrir hvíldardaga */
+.wc.wc-dots{min-height:56px;background:none;overflow:visible;gap:4px;box-shadow:none}
+.wc-dots .dot{width:34px;height:34px;border-radius:17px;display:grid;place-items:center;color:var(--k);background:color-mix(in srgb, var(--k) 16%, transparent);box-shadow:inset 0 0 0 2px var(--k)}
+.wc-dots.multi .dot{width:26px;height:26px;border-radius:13px}
+.wc-dots.none{background:none}
+.wc-dots.none::after{content:"";width:6px;height:6px;border-radius:3px;background:var(--ink-3);opacity:.45}
+.ws-dots .wd.today{background:none;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.ws-dots .wd.today b{color:var(--ink)}
+.ws-dots .week-grid{row-gap:2px}
+/* Flísar: heilir litaðir kubbar með tákni og tölu */
+.wc.wc-tiles{min-height:62px;padding:0;gap:2px;background:none;align-items:stretch;justify-content:stretch;border-radius:12px}
+.wc-tiles .tl{flex:1;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;padding:5px 6px;background:var(--k);color:var(--tile-ink);min-height:0}
+.wc-tiles .tl b{font-size:11px;font-weight:800;line-height:1.05;white-space:nowrap;letter-spacing:-.2px}
+.wc-tiles.multi .tl{padding:3px 5px;flex-direction:row;align-items:center;gap:3px}
+.wc-tiles.multi .tl b{font-size:10px}
+.wc-tiles.none{background:none;box-shadow:inset 0 0 0 1.5px color-mix(in srgb, var(--ink-3) 45%, transparent)}
+.wc-tiles.today{outline:3px solid var(--ink);outline-offset:2px;box-shadow:none}
+.wc-tiles.none.today{background:none}
+/* Hringir: fyllast upp í 60 mínútur */
+.wc.wc-rings{min-height:52px;background:none;overflow:visible;box-shadow:none}
+.wc-rings > svg{width:46px;height:46px;display:block}
+.wc-rings .ri svg{width:14px;height:14px}
+.wc-rings .trk{fill:none;stroke:var(--hair);stroke-width:5}
+.wc-rings .arc{fill:none;stroke-width:5;stroke-linecap:round}
+.wc-rings .ri{position:absolute;inset:0;display:grid;place-items:center}
+.wc-rings.none{background:none}
+.wc-rings.none::after{content:"";width:34px;height:34px;border-radius:50%;box-shadow:inset 0 0 0 5px var(--hair)}
+.ws-rings .wd.today{background:none;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.ws-rings .wd.today b{color:var(--ink)}
+.wc.wc-rings.today{background:var(--hair);border-radius:14px}
+/* Súlurit: ein súla á mann á dag */
+.week-grid.nobars{margin-bottom:4px}
+.wbars{display:grid;grid-template-columns:52px repeat(7,minmax(0,1fr));gap:5px;align-items:end}
+.wbcol{display:flex;justify-content:center;align-items:flex-end;gap:4px;min-height:170px;border-radius:12px;padding:4px 0 6px}
+.wbcol.today{background:var(--hair)}
+.wbar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;border:0;background:none;padding:0;color:var(--ink);min-width:20px;cursor:pointer}
+.wbt{font-size:10px;font-weight:700;color:var(--ink-2);min-height:12px}
+.wbb{width:16px;border-radius:7px;overflow:hidden;display:flex;flex-direction:column;background:var(--hair)}
+.wbb i{display:block;min-height:3px}
+.wbar .av{flex:none}
+@media (min-width: 700px){.wbars{grid-template-columns:68px repeat(7,minmax(0,1fr))}.wbb{width:22px}.wbcol{min-height:190px;gap:8px}}
+@media (max-width:370px){.wbars{grid-template-columns:44px repeat(7,minmax(0,1fr));gap:4px}.wbb{width:12px}}
+button.wbtn.wc-dots, button.wbtn.wc-tiles, button.wbtn.wc-rings{border:0;padding:0}
+.wc-tiles .tl{padding:4px 4px}
+/* Forskoðanir í stillingum */
+.wsprev.ws-dots .wc, .wsprev.ws-rings .wc{min-height:40px}
+.wsprev .wc-dots .dot{width:26px;height:26px}
+.wsprev .wc-dots.multi .dot{width:18px;height:18px}
+.wsprev .wc-dots.multi .dot svg, .wsprev .wc-tiles svg{width:10px;height:10px}
+.wsprev .wc-rings > svg{width:30px;height:30px}
+.wsprev .wc-rings .ri svg{width:10px;height:10px}
+.wsprev .wc-rings.none::after{width:22px;height:22px;box-shadow:inset 0 0 0 4px var(--hair)}
+.wsprev .wc-tiles{min-height:40px}
+.wsprev .wc-tiles .tl b{font-size:8px}
+.wsbars{display:flex;align-items:flex-end;justify-content:center;gap:10px;height:40px;grid-column:1 / -1}
+.wsbars i{display:block;width:14px;border-radius:5px;min-height:4px}
+.wsprev.ws-bars{display:flex;justify-content:center}
 </style>
 </head>
 <body data-gate="loading">
