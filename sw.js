@@ -1,6 +1,6 @@
 /* Einfaldur service worker: appið opnast án nets.
    Eigin skrár: net fyrst, annars afrit. Firebase-kóðinn og Excel-hlutinn: afrit fyrst (útgáfurnar eru festar). */
-const CACHE = 'aefingabokin-v39';
+const CACHE = 'aefingabokin-v42';
 const SHELL = ['./', './index.html', './js/main.js', './js/ui.js', './js/store.js', './js/settings.js', './js/importers.js', './js/pools.js', './js/firebase-config.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
