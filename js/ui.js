@@ -4,6 +4,7 @@
    ===================================================================== */
 import { readImportFile } from './importers.js';
 import { POOLS } from './pools.js';
+import { GROUPS, COMBOS, GOALS, LEVELS, EXMETA, buildPlan, prescribe, alternatives, estMinutes, restTxt, ROLE_NAME, rxFor } from './coach.js';
 import { PALETTES, HOME_CARDS, OPTIONAL_TABS, SCHEMA, normalize, readLocal, writeLocal, applyAppearance, prefersDark } from './settings.js';
 
 export function startApp(Store){
@@ -621,12 +622,15 @@ function itemHtml(s){
 
 /* Skrá */
 function renderLog(){
+  if (!draft && ui.planPreview) return renderPlanPreview();
   if (!draft){
     const mine = Object.keys(TYPES).filter(k => sportOn(k)), rest = Object.keys(TYPES).filter(k => !sportOn(k));
     view.innerHTML = `<div class="eyebrow">Skráð á ${esc(pname(state.active))}</div><h1>Hvað á að gera?</h1>
       ${state.active === me.uid ? `<div class="watchrow glass"><button class="watchbtn" data-act="importopen"><span class="wic">${WATCH}</span>
         <span><b>Sækja æfingar úr úri</b><span class="tiny">Samsung, Garmin, Strava og fleira</span></span></button>
         <button class="ibtn" data-act="importhelp" aria-label="Leiðbeiningar fyrir hvert úr">i</button></div>` : ''}
+      ${sportOn('lift') && state.active === me.uid ? `<button class="plancard glass" data-act="planopen"><span class="pic">${sportIcon('lift', 22)}</span>
+        <span><b>Æfingaplan</b><span class="tiny">Veldu vöðvaflokk og markmið, appið setur upp æfinguna fyrir þig</span></span>${ICON.r}</button>` : ''}
       <div class="types">${mine.map(k => { const T = TYPES[k]; return `<button class="type glass" style="--tc:${tc(k)}" data-newtype="${k}"><i></i><b>${T.name}</b><span>${T.hint}</span></button>`; }).join('')}</div>
       ${rest.length ? `<details class="more"${ui.moreOpen ? ' open' : ''}><summary>Fleiri íþróttir</summary><div class="opts" style="padding:8px 0 0">${rest.map(k => `<button class="chip spachip" data-newtype="${k}"><i style="background:${tc(k)}"></i>${TYPES[k].name}</button>`).join('')}</div>
         <p class="tiny">Veldu í Stillingum hvaða íþróttir birtast sem flísar.</p></details>` : ''}`;
@@ -648,17 +652,22 @@ function renderLift(){
   let body;
   if (!ex){
     body = `<div class="glass" style="padding:22px;text-align:center;margin-top:12px"><b>Veldu fyrstu æfinguna</b><p class="muted" style="margin:6px 0 14px">Þú sérð hvað þú tókst síðast í hverju setti.</p>
-      <button class="btn primary" data-act="pickex">Velja æfingu</button></div>`;
+      <button class="btn primary" data-act="pickex">Velja æfingu</button></div>
+      ${draft.profileId === me.uid ? `<button class="plancard glass" style="margin-top:12px" data-act="planopen"><span class="pic">${sportIcon('lift', 22)}</span>
+        <span><b>Eða láttu appið setja upp æfinguna</b><span class="tiny">Veldu vöðvaflokk og markmið: styrkur, pump eða þol</span></span>${ICON.r}</button>` : ''}`;
   } else {
     const last = lastSetsOf(ex), lp = lastPerformance(ex.exId, draft.id, draft.profileId);
     const editing = draft.editSet != null, si = editing ? draft.editSet : ex.sets.length;
     const prevSame = last[si], cur = ex.cur || (ex.cur = suggestion(ex)), next = exs[draft.cur + 1];
     body = `
+      ${draft.plan ? `<div class="planbar"><span class="pill">${esc(draft.plan.name)}</span><span class="pill">${GOALS[draft.plan.goal] ? GOALS[draft.plan.goal].name : ''}</span></div>` : ''}
       <div class="exhead">
         <div class="k">Æfing ${draft.cur + 1} af ${exs.length}</div>
         <div class="nm">${esc(ex.name || exName(ex.exId))}</div>
         <div class="last">${lp ? `Síðast ${fmtDate(lp.date)}: ${lp.sets.map(setTxt).join(', ')}` : 'Fyrsta skiptið, engar fyrri tölur'}</div>
       </div>
+      ${planTargetBox(ex)}
+      ${ex.t && ex.t.note && !ex.sets.length ? `<div class="tiny" style="margin:-4px 4px 10px">${esc(ex.t.note)}</div>` : ''}
       <section class="glass setcard" aria-label="Sett ${si + 1}">
         <div class="row1"><b>${editing ? `Breyta setti ${si + 1}` : `Sett ${si + 1}`}</b>
           ${prevSame ? `<span class="lastpill"><span>Síðast </span>${setTxt(prevSame)}</span>` : (last.length ? `<span class="lastpill"><span>Síðast ${last.length} sett</span></span>` : '')}</div>
@@ -676,14 +685,14 @@ function renderLift(){
         <button class="bigbtn" data-act="doneset">${editing ? 'Uppfæra sett' : 'Klára sett'}</button>
         ${editing ? `<button class="btn ghost block" data-act="canceledit">Hætta við breytingu</button>` : ''}
       </section>
-      ${draft.lastSetAt ? `<div class="rest glass" data-rest><span class="muted">Hvíld</span><b data-timer="rest"></b></div>` : ''}
+      ${draft.lastSetAt ? `<div class="rest glass" data-rest ${ex.t ? `data-target="${ex.t.rest}"` : ''}><span class="muted">Hvíld</span><b data-timer="rest"></b>${ex.t ? `<span class="tiny" data-resthint>af ${restTxt(ex.t.rest)}</span>` : ''}</div>` : ''}
       ${ex.sets.length ? `<ul class="done glass list">${ex.sets.map((st, i) => { const c = compare(st, last[i]);
         return `<li><span class="sn">Sett ${i + 1}</span>
           <button class="sv" data-act="editset" data-si="${i}" aria-label="Breyta setti ${i + 1}">${setTxt(st)}<small>${last[i] ? `Síðast ${setTxt(last[i])}` : 'Ekkert sett síðast'}</small></button>
           <span class="cmp ${c && !c.up ? 'down' : ''}">${c ? c.t : ''}</span>
           <button class="xbtn" data-act="rmset" data-si="${i}" aria-label="Eyða setti ${i + 1}">${ICON.x}</button></li>`; }).join('')}</ul>` : ''}
       <div style="display:flex;gap:10px;margin-top:12px">
-        ${next ? `<button class="btn primary" style="flex:1" data-act="curex" data-ei="${draft.cur + 1}">Næst: ${esc(next.name || exName(next.exId))}</button>` : `<button class="btn primary" style="flex:1" data-act="pickex">Bæta við æfingu</button>`}
+        ${next ? `<button class="btn primary ${ex.t && ex.sets.length >= ex.t.sets ? 'pulse' : ''}" style="flex:1" data-act="curex" data-ei="${draft.cur + 1}">Næst: ${esc(next.name || exName(next.exId))}</button>` : `<button class="btn primary" style="flex:1" data-act="pickex">Bæta við æfingu</button>`}
       </div>`;
   }
   view.innerHTML = `${edTop()}
@@ -840,7 +849,8 @@ function saveLog(){
     durationMin: parseDur(d.durRaw), createdAt: d.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
     createdBy: d.createdBy || me.uid };
   if (d.type === 'lift'){
-    s.exercises = d.exercises.map(e => ({exId: e.exId, name: e.name || exName(e.exId), sets: e.sets.map(st => ({kg: num(st.kg) ?? 0, reps: num(st.reps) ?? 0}))})).filter(e => e.sets.length);
+    s.exercises = d.exercises.map(e => ({exId: e.exId, name: e.name || exName(e.exId), sets: e.sets.map(st => ({kg: num(st.kg) ?? 0, reps: num(st.reps) ?? 0})), ...(e.t ? { t: { sets: e.t.sets, lo: e.t.lo, hi: e.t.hi, role: e.t.role || null, slot: e.t.slot || null } } : {})})).filter(e => e.sets.length);
+    s.plan = d.plan || null;
     if (!s.exercises.length) return toast('Kláraðu að minnsta kosti eitt sett');
     s.spa = spaParsed(); if (!s.spa.length) s.spa = null;
     if (s.durationMin == null && d.startedAt){ const m = (Date.now() - d.startedAt) / 60000; if (m < 300) s.durationMin = Math.round(m); }
@@ -960,7 +970,7 @@ function doneSet(){
   const st = {kg: kg ?? 0, reps};
   if (draft.editSet != null){ ex.sets[draft.editSet] = st; draft.editSet = null; toast('Sett uppfært'); }
   else { ex.sets.push(st); draft.lastSetAt = Date.now(); }
-  ex.cur = suggestion(ex); saveDraft(); render();
+  ex.cur = ex.t ? { kg: fmtIn(st.kg), reps: String(ex.t.reps) } : suggestion(ex); saveDraft(); render();
 }
 function step(k, dir){
   const ex = curEx(); if (!ex) return;
@@ -2701,6 +2711,119 @@ function openDay(pid, day){
     <button class="btn block" style="margin-top:12px" data-act="logday" data-lpid="${esc(pid)}" data-lday="${day}">+ Skrá æfingu á þennan dag</button>`);
 }
 
+/* ---------- Æfingaplan: einkaþjálfari í lyftingum ---------- */
+const PLAN_PREFS = 'aefingabokin.planPrefs';
+const planPrefs = () => { try { return { groups: ['back'], combo: null, goal: 'pump', level: 'advanced', mins: 45, ...JSON.parse(LS.get(PLAN_PREFS) || '{}') }; } catch(e){ return { groups: ['back'], combo: null, goal: 'pump', level: 'advanced', mins: 45 }; } };
+let planSetup = null;
+/* Fyrri skipti æfingar hjá virka notandanum, nýjast fyrst */
+function planHist(id){
+  return mySessions().filter(s => (s.exercises || []).some(e => e.exId === id)).sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 6)
+    .map(s => { const e = s.exercises.find(x => x.exId === id); return { date: s.date, sets: (e.sets || []).map(st => ({ kg: num(st.kg) || 0, reps: num(st.reps) || 0 })), t: e.t || null }; });
+}
+function planRecent(id){ const h = planHist(id)[0]; return h ? Math.round((parseYmd(today()) - parseYmd(h.date)) / 86400000) : null; }
+/* Hve langt síðan hver vöðvaflokkur var tekinn (til að mæla með næsta flokki) */
+function groupRecency(){
+  const out = {}; const t0 = parseYmd(today());
+  mySessions().filter(s => s.type === 'lift' || (s.exercises || []).length).forEach(s => {
+    const cnt = {}; (s.exercises || []).forEach(e => { const m = (EXMETA[e.exId] || {}).m; if (m) cnt[m] = (cnt[m] || 0) + 1; });
+    ((s.plan && s.plan.groups) || []).forEach(g => cnt[g] = (cnt[g] || 0) + 2);
+    Object.entries(cnt).forEach(([g, n]) => { if (n >= 2){ const d = Math.round((t0 - parseYmd(s.date)) / 86400000); if (out[g] == null || d < out[g]) out[g] = d; } });
+  });
+  return out;
+}
+const planTitle = o => o.combo ? COMBOS[o.combo].name : o.groups.map(g => GROUPS[g].name).join(' og ');
+function openPlanSetup(){
+  planSetup = planSetup || planPrefs();
+  const o = planSetup, rec = groupRecency();
+  const ranked = Object.keys(GROUPS).filter(g => g !== 'core').sort((a, b) => (rec[b] ?? 99) - (rec[a] ?? 99));
+  const suggest = Object.keys(rec).length ? ranked.slice(0, 2).filter(g => (rec[g] ?? 99) >= 2) : [];
+  const lastPlan = mySessions().filter(s => s.plan).sort(byDateDesc)[0];
+  const ago = d => d == null ? 'Ekki tekið nýlega' : d === 0 ? 'Í dag' : d === 1 ? 'Í gær' : `Fyrir ${d} dögum`;
+  openSheet('Æfingaplan', `
+    <p class="muted" style="margin-top:0">Veldu hvað þú vilt taka og markmiðið. Appið setur upp æfinguna eins og þjálfari: þyngstu æfingarnar fyrst, rétt sett og hvíld, og þyngd miðað við fyrri skipti.</p>
+    ${lastPlan ? `<button class="btn block" style="margin-bottom:10px" data-act="planrepeat">${ICON.r} Endurtaka síðast: ${esc(planTitle(lastPlan.plan))} · ${GOALS[lastPlan.plan.goal] ? GOALS[lastPlan.plan.goal].name : ''}</button>` : ''}
+    <div class="plh">Vöðvaflokkar <span class="tiny">Veldu einn eða tvo</span></div>
+    <div class="plgrid">${Object.entries(GROUPS).map(([k, g]) => `<button class="plg" data-act="plgroup" data-v="${k}" aria-pressed="${!o.combo && o.groups.includes(k)}">
+      <b>${g.name}</b><span class="tiny">${suggest.includes(k) ? '<em class="plrec">Mælt með</em> ' : ''}${ago(rec[k])}</span></button>`).join('')}</div>
+    <div class="plh">Eða samsett æfing</div>
+    <div class="plgrid">${Object.entries(COMBOS).map(([k, c]) => `<button class="plg" data-act="plcombo" data-v="${k}" aria-pressed="${o.combo === k}"><b>${c.name}</b><span class="tiny">${c.hint}</span></button>`).join('')}</div>
+    <div class="plh">Markmið</div>
+    <div class="plgoals">${Object.entries(GOALS).map(([k, g]) => `<button class="plgoal" data-act="plgoal" data-v="${k}" aria-pressed="${o.goal === k}"><b>${g.name}</b><span class="tiny">${g.short}</span></button>`).join('')}</div>
+    <p class="tiny" style="margin:6px 2px 0">${esc(GOALS[o.goal].desc)}</p>
+    <div class="plh">Reynsla</div>
+    <div class="seg glass">${Object.entries(LEVELS).map(([k, l]) => `<button data-act="pllevel" data-v="${k}" aria-pressed="${o.level === k}">${l.name}</button>`).join('')}</div>
+    <p class="tiny" style="margin:6px 2px 0">${o.level === 'beginner' ? 'Færri sett, vélar og handlóð í stað tæknilegra stangaræfinga, og meiri áhersla á tækni.' : 'Fjölliðaæfingar með stöng, meira magn og þyngri sett.'}</p>
+    <div class="plh">Tími</div>
+    <div class="seg glass">${[30, 45, 60].map(m => `<button data-act="plmins" data-v="${m}" aria-pressed="${o.mins === m}">${m} mín</button>`).join('')}</div>
+    <button class="cta" data-act="plbuild" ${!o.combo && !o.groups.length ? 'disabled' : ''}>Setja upp æfingu</button>`);
+}
+function buildFromSetup(opt, keepItems){
+  /* Aðalæfingar haldast eins og síðast þegar sami flokkur og markmið var tekinn, svo framvindan sjáist */
+  if (!keepItems){
+    const key = o => `${o.combo || (o.groups || []).slice().sort().join('+')}|${o.goal}`;
+    const prev = mySessions().filter(x => x.plan && key(x.plan.combo ? { combo: x.plan.combo, goal: x.plan.goal } : x.plan) === key(opt)).sort(byDateDesc)[0];
+    if (prev) keepItems = prev.exercises.filter(e => e.t).map(e => ({ exId: e.exId, role: e.t.role, slot: e.t.slot }));
+  }
+  const keep = {}; (keepItems || []).forEach(x => { if ((x.role === 'main' || x.role === 'main2') && x.slot) keep[x.slot] = x.exId; });
+  const items = buildPlan(opt, { hist: planHist, recent: planRecent, keep });
+  LS.set(PLAN_PREFS, JSON.stringify({ groups: opt.groups, combo: opt.combo, goal: opt.goal, level: opt.level, mins: opt.mins }));
+  ui.planPreview = { opt: { ...opt }, items }; draft = null; saveDraft(); ui.tab = 'log'; closeSheet(); render(); window.scrollTo(0, 0);
+}
+function renderPlanPreview(){
+  const P = ui.planPreview, o = P.opt, G = GOALS[o.goal], est = estMinutes(P.items);
+  view.innerHTML = `<div class="plantop"><button class="xbtn" data-act="planclose" aria-label="Loka plani">${ICON.x}</button><span class="tiny">Æfingaplan</span></div>
+    <h1 style="margin:2px 0 4px">${esc(planTitle(o))}</h1>
+    <div class="plmeta"><span class="pill">${G.name}</span><span class="pill">${LEVELS[o.level].name}</span><span class="pill">${P.items.length} æfingar</span><span class="pill">~${est} mín</span>
+      <button class="linkbtn" data-act="planopen">Breyta vali</button></div>
+    <div class="coachnote glass">${ICON.r}<span><b>Frá þjálfaranum.</b> Hitaðu upp í 5–10 mín og taktu 2–3 létt upphitunarsett á fyrstu æfingunni. Í hverju setti: ${LEVELS[o.level].rir}. Tækni gengur fyrir þyngd.</span></div>
+    <ol class="plist">${P.items.map((x, i) => `<li class="pitem glass">
+      <div class="pnum">${i + 1}</div>
+      <div class="pbody"><div class="ptop"><b>${esc(x.name)}</b><span class="tiny">${ROLE_NAME[x.role] || ''} · ${esc(GROUPS[(EXMETA[x.exId] || {}).m] ? GROUPS[EXMETA[x.exId].m].name : '')}</span></div>
+        <div class="prx"><span><b>${x.sets} × ${x.lo}–${x.hi}</b> endurtekningar</span><span>Hvíld ${restTxt(x.rest)}</span>
+          <span>${x.kg != null ? (x.kg > 0 ? `<b>${nf(x.kg, 1)} kg</b>${x.trend ? ` <em class="up">${x.trend}</em>` : ''}` : 'Líkamsþyngd') : '<b>Ný æfing</b>'}</span></div>
+        ${x.note ? `<div class="tiny pnote">${esc(x.note)}</div>` : ''}
+        ${i === 0 && o.goal === 'strength' && x.kg ? `<div class="tiny pnote">Upphitun: ${nf(Math.round(x.kg * 0.5 / 2.5) * 2.5, 1)} kg × 8, ${nf(Math.round(x.kg * 0.7 / 2.5) * 2.5, 1)} kg × 4, ${nf(Math.round(x.kg * 0.85 / 2.5) * 2.5, 1)} kg × 2</div>` : ''}</div>
+      <div class="pacts"><button class="btn ghost" data-act="planswap" data-i="${i}" aria-label="Skipta út ${esc(x.name)}">Skipta</button>
+        <button class="xbtn" data-act="planrm" data-i="${i}" aria-label="Fjarlægja ${esc(x.name)}">${ICON.x}</button></div></li>`).join('')}</ol>
+    <div class="plbtns"><button class="btn" data-act="planadd">+ Bæta við æfingu</button><button class="btn" data-act="planshuffle">Nýjar aukaæfingar</button></div>
+    <button class="cta" data-act="planstart" ${P.items.length ? '' : 'disabled'}>Byrja æfingu</button>
+    <p class="tiny" style="text-align:center">Aðalæfingarnar haldast eins milli skipta svo þú sjáir framfarir. Þegar þú nærð efri mörkum í öllum settum hækkar þyngdin næst.</p>`;
+}
+function openPlanSwap(i){
+  const P = ui.planPreview, x = P.items[i], alts = alternatives(x);
+  openSheet(`Skipta út: ${x.name}`, `<p class="muted" style="margin-top:0">Æfingar fyrir sama vöðvahóp. Efst eru þær sem passa best í þetta hólf.</p>
+    <ul class="pick">${alts.map(id => { const m = EXMETA[id], d = planRecent(id);
+      return `<li><button data-act="planpick" data-i="${i}" data-id="${esc(id)}"><span><b>${esc(m.name)}</b><span class="tiny">${m.kind === 'c' ? 'Fjölliða' : 'Einangrun'} · ${{ bar: 'Stöng', db: 'Handlóð', mach: 'Vél', cable: 'Kapall', bw: 'Eigin þyngd' }[m.eq]}${m.lvl === 3 ? ' · Tæknileg' : ''}${d != null ? ` · Síðast fyrir ${d} d.` : ''}</span></span>${ICON.r}</button></li>`; }).join('')}</ul>`);
+}
+function planReplace(i, id){
+  const P = ui.planPreview, x = P.items[i], rx = rxFor(P.opt.goal, x.role, P.opt.level);
+  P.items[i] = { ...x, exId: id, name: EXMETA[id].name, ...prescribe(id, rx, planHist(id)), alts: [x.exId, ...x.alts.filter(a => a !== id)] };
+  closeSheet(); render();
+}
+function openPlanAdd(){
+  const P = ui.planPreview, have = new Set(P.items.map(x => x.exId));
+  const byG = Object.keys(GROUPS).map(g => [g, Object.keys(EXMETA).filter(id => EXMETA[id].m === g && !have.has(id))]);
+  openSheet('Bæta við æfingu', byG.map(([g, ids]) => ids.length ? `<div class="grp">${GROUPS[g].name}</div><ul class="pick">${ids.map(id => `<li><button data-act="planaddpick" data-id="${esc(id)}"><span><b>${esc(EXMETA[id].name)}</b></span>${ICON.r}</button></li>`).join('')}</ul>` : '').join(''));
+}
+function startPlan(){
+  const P = ui.planPreview; if (!P) return;
+  startDraft('lift');
+  draft.plan = { groups: P.opt.combo ? COMBOS[P.opt.combo].groups : P.opt.groups, combo: P.opt.combo || null, goal: P.opt.goal, level: P.opt.level, mins: P.opt.mins, name: planTitle(P.opt) };
+  draft.exercises = P.items.map(x => ({ exId: x.exId, name: x.name, sets: [], t: { sets: x.sets, lo: x.lo, hi: x.hi, rest: x.rest, kg: x.kg, reps: x.reps, note: x.note, trend: x.trend, role: x.role, slot: x.slot },
+    cur: { kg: x.kg != null ? fmtIn(x.kg) : '', reps: String(x.reps) } }));
+  draft.cur = 0; ui.planPreview = null; saveDraft(); closeSheet();
+  bump('totals', { plans: { [P.opt.combo || P.opt.groups.join('+')]: 1 }, planGoal: { [P.opt.goal]: 1 }, planLevel: { [P.opt.level]: 1 } });
+  render(); window.scrollTo(0, 0);
+}
+function planTargetBox(ex){
+  const t = ex.t; if (!t) return '';
+  const done = ex.sets.length >= t.sets;
+  return `<div class="ptarget glass ${done ? 'done' : ''}"><div><span class="tiny">Markmið</span><b>${t.sets} × ${t.lo}–${t.hi}</b></div>
+    <div><span class="tiny">Hvíld</span><b>${restTxt(t.rest)}</b></div>
+    <div><span class="tiny">Tillaga</span><b>${t.kg ? `${nf(t.kg, 1)} kg` : t.kg === 0 ? 'Eigin þyngd' : 'Finndu þyngd'}</b>${t.trend ? `<em class="up">${t.trend}</em>` : ''}</div>
+    <div class="pset">${done ? `${ICON.r} Öll ${t.sets} sett búin` : `Sett ${Math.min(ex.sets.length + 1, t.sets)} af ${t.sets}`}</div></div>`;
+}
+
 /* ---------- Gröf ---------- */
 function niceMax(v){ if (v <= 0) return 1; const p = 10 ** Math.floor(Math.log10(v)), n = v / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; }
 function lineChart(pts, o = {}){
@@ -2970,7 +3093,10 @@ function tick(){
   if (!draft || gate !== 'app') return;
   const sEl = view.querySelector('[data-timer="session"]'); if (sEl && draft.startedAt) sEl.textContent = fmtClock(Date.now() - draft.startedAt);
   const rEl = view.querySelector('[data-timer="rest"]');
-  if (rEl && draft.lastSetAt){ const ms = Date.now() - draft.lastSetAt; if (ms > 15 * 60000) rEl.closest('[data-rest]').style.display = 'none'; else rEl.textContent = fmtClock(ms); }
+  if (rEl && draft.lastSetAt){ const ms = Date.now() - draft.lastSetAt, box = rEl.closest('[data-rest]');
+    if (ms > 15 * 60000) box.style.display = 'none'; else rEl.textContent = fmtClock(ms);
+    const tgt = +box.dataset.target; if (tgt && ms >= tgt * 1000 && !box.classList.contains('ready')){ box.classList.add('ready'); const h = box.querySelector('[data-resthint]'); if (h) h.textContent = 'Tilbúin(n) í næsta sett';
+      if (navigator.vibrate && draft.lastBuzz !== draft.lastSetAt){ draft.lastBuzz = draft.lastSetAt; try { navigator.vibrate([180, 80, 180]); } catch(e){} } } }
 }
 const tickTimer = setInterval(tick, 1000);
 
@@ -3106,6 +3232,26 @@ document.addEventListener('click', async e => {
       break; }
     case 'invite': invite(); break;
     case 'sheetclose': closeSheet(); break;
+    case 'planopen': openPlanSetup(); break;
+    case 'planclose': ui.planPreview = null; render(); break;
+    case 'plgroup': { const o = planSetup; if (o.combo){ o.combo = null; o.groups = []; } const i = o.groups.indexOf(d.v);
+      if (i >= 0) o.groups.splice(i, 1); else { o.groups.push(d.v); if (o.groups.length > 2) o.groups.shift(); } openPlanSetup(); break; }
+    case 'plcombo': planSetup.combo = planSetup.combo === d.v ? null : d.v; if (planSetup.combo) planSetup.groups = []; openPlanSetup(); break;
+    case 'plgoal': planSetup.goal = d.v; openPlanSetup(); break;
+    case 'pllevel': planSetup.level = d.v; openPlanSetup(); break;
+    case 'plmins': planSetup.mins = +d.v; openPlanSetup(); break;
+    case 'plbuild': buildFromSetup({ ...planSetup, shuffle: 0 }); break;
+    case 'planrepeat': { const lp = mySessions().filter(x => x.plan).sort(byDateDesc)[0]; if (!lp) break; const pl = lp.plan;
+      planSetup = { groups: pl.combo ? [] : pl.groups, combo: pl.combo || null, goal: pl.goal, level: pl.level, mins: pl.mins || 45 };
+      buildFromSetup({ ...planSetup, shuffle: 0 }); break; }
+    case 'planswap': openPlanSwap(+d.i); break;
+    case 'planpick': planReplace(+d.i, d.id); break;
+    case 'planrm': ui.planPreview.items.splice(+d.i, 1); render(); break;
+    case 'planadd': openPlanAdd(); break;
+    case 'planaddpick': { const P = ui.planPreview, role = EXMETA[d.id].kind === 'c' ? 'acc' : 'iso', rx = rxFor(P.opt.goal, role, P.opt.level);
+      P.items.push({ exId: d.id, name: EXMETA[d.id].name, role, slot: 'extra', alts: [], ...prescribe(d.id, rx, planHist(d.id)) }); closeSheet(); render(); break; }
+    case 'planshuffle': { const P = ui.planPreview; P.opt.shuffle = (P.opt.shuffle || 0) + 1; buildFromSetup(P.opt, P.items); toast('Nýjar aukaæfingar'); break; }
+    case 'planstart': startPlan(); break;
     case 'logday': closeSheet(); if (d.lpid !== state.active) setActive(d.lpid); draft = null; saveDraft(); ui.presetDate = d.lday; ui.tab = 'log'; render(); window.scrollTo(0, 0); break;
     case 'diststep': case 'distpre': {
       const st = distStep(), cur = num(draft.distRaw) || 0;
