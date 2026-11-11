@@ -16,7 +16,8 @@ export const DEFAULTS = {
   glass: 'on',          // on | off
   weekStyle: 'dots',    // útlit vikurits: dots (punktar) | bars (súlurit) | tiles (flísar) | rings (hringir)
   sportPalette: 'classic', // litir íþrótta: classic | hraun | orka | nordurljos | solarlag | jokull
-  homeCards: ['week', 'goals', 'stats', 'kudos', 'recent', 'prs'],
+  homeCards: ['week', 'summary', 'goals', 'stats', 'muscles', 'kudos', 'recent', 'prs'],
+  templates: [],        // sniðmát æfinga sem notandinn vistar (fljótleg skráning)
   homeHidden: [],
   tabsHidden: [],
   kgStep: 'auto',       // auto | 2.5 | 1.25 | 1 | 0.5
@@ -40,7 +41,9 @@ export const PALETTES = [
 export const HOME_CARDS = [
   { id: 'week',   name: 'Vikuritið' },
   { id: 'goals',  name: 'Markmið' },
+  { id: 'summary', name: 'Vikusamantekt (sun. og mán.)' },
   { id: 'stats',  name: 'Tölur vikunnar' },
+  { id: 'muscles', name: 'Vöðvar vikunnar' },
   { id: 'kudos',  name: 'Hrós sem þú færð' },
   { id: 'recent', name: 'Síðustu æfingar' },
   { id: 'prs',    name: 'Þyngstu settin' }
@@ -81,6 +84,7 @@ export function normalize(s){
   if (!['classic', 'hraun', 'orka', 'nordurljos', 'solarlag', 'jokull'].includes(o.sportPalette)) o.sportPalette = DEFAULTS.sportPalette;
   o.sports = (Array.isArray(o.sports) ? o.sports : []).filter(id => SPORT_IDS.includes(id));
   if (!o.sports.length) o.sports = DEFAULTS.sports.slice();
+  o.templates = (Array.isArray(o.templates) ? o.templates : []).filter(t => t && t.id && t.name && t.type).slice(0, 20);
   const hr = Number(o.maxHr); o.maxHr = hr >= 120 && hr <= 230 ? Math.round(hr) : null;
   return o;
 }
