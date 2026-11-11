@@ -110,6 +110,27 @@ og mínútur á viku fyrir íþróttir sem eru mældar í tíma. Í golfi sést 
 meðaltal síðustu hringja, línurit miðað við par og lengsti bolti. Nýtt persónulegt met (eftir a.m.k. fjögur skipti)
 fær fagnaðarskjá og merki sem vinir sjá.
 
+## Æfingaplan (einkaþjálfari í lyftingum)
+
+Undir **Skrá** (og í tómri lyftingaæfingu) er **Æfingaplan**. Notandinn velur:
+
+- **Vöðvaflokk**, einn eða tvo: Brjóst, Bak, Fætur, Rass og aftanlæri, Axlir, Hendur, Kviður og miðja. Eða samsetta
+  æfingu: Allur líkaminn, Efri hluti, Neðri hluti, Push eða Pull. Appið sýnir hve langt er síðan hver flokkur var tekinn
+  og mælir með þeim sem hafa fengið lengsta hvíld.
+- **Markmið**: Styrkur (4–6 endurtekningar, löng hvíld), Pump (8–12, 60–120 sek.) eða Þol (15–20, stutt hvíld).
+- **Reynslu**: Byrjandi (mest 3 sett, ekki undir 6 endurtekningum, vélar og handlóð) eða Vanur.
+- **Tíma**: 30, 45 eða 60 mínútur, sem ræður fjölda æfinga.
+
+Uppsetningin fylgir því sem þjálfarar gera (`js/coach.js`): þyngsta fjölliðaæfingin fyrst, svo aukaæfingar og
+einangrun síðast; tveir flokkar eru paraðir saman. Aðalæfingar haldast eins milli skipta, en aukaæfingum er skipt út
+eftir því hvað er lengst síðan var tekið. Áður en byrjað er má **skipta út** hverri æfingu (valkostir fyrir sama
+vöðvahóp), fjarlægja, bæta við eða fá nýjar aukaæfingar.
+
+**Framvinda (tvöföld framvinda):** Appið leggur til þyngd út frá síðustu skiptum. Þegar öll sett ná efri mörkum
+endurtekninga hækkar þyngdin næst (+5 kg í fótum og rassi með stöng, +2 kg handlóð, annars +2,5 kg). Annars er sama
+þyngd og markmiðið ein endurtekning í viðbót. Í æfingunni sést markmið, hvíld og tillaga, hvíldarteljarinn lætur vita
+(og síminn titrar) þegar hvíldin er búin, og fyrsta æfing í styrk fær upphitunarsett.
+
 ## CrossFit
 
 CrossFit-skráningin er höfð einföld, því flest box nota sitt eigið app fyrir æfingu dagsins: box, æfing dagsins í einni línu,
