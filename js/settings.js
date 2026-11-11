@@ -15,6 +15,7 @@ export const DEFAULTS = {
   textSize: 'normal',   // normal | large
   glass: 'on',          // on | off
   weekStyle: 'A',       // útlit vikurits: A | B | C | D
+  sportPalette: 'classic', // litir íþrótta: classic | orka | nordurljos | solarlag | jokull
   homeCards: ['week', 'goals', 'stats', 'kudos', 'recent', 'prs'],
   homeHidden: [],
   tabsHidden: [],
@@ -57,6 +58,7 @@ export const SCHEMA = {
     { key: 'palette', label: 'Litaþema', type: 'palette' },
     { key: 'textSize', label: 'Textastærð', type: 'choice', options: [['normal', 'Venjuleg'], ['large', 'Stærri']] },
     { key: 'weekStyle', label: 'Útlit vikurits', hint: 'Hvernig æfingar dagsins birtast í vikunni', type: 'weekstyle' },
+    { key: 'sportPalette', label: 'Litir íþrótta', hint: 'Litirnir á æfingum í vikuritinu, sögunni og línuritum', type: 'sportpal' },
     { key: 'glass', label: 'Gegnsæ glerjáferð', hint: 'Slökktu á henni ef síminn hikstar eða textinn sést illa', type: 'toggle', on: 'on', off: 'off' }
   ],
   logging: [
@@ -77,6 +79,7 @@ export function normalize(s){
   o.tabsHidden = (Array.isArray(o.tabsHidden) ? o.tabsHidden : []).filter(id => OPTIONAL_TABS.some(t => t.id === id));
   if (!PALETTES.some(p => p.id === o.palette)) o.palette = DEFAULTS.palette;
   if (!['A', 'B', 'C', 'D'].includes(o.weekStyle)) o.weekStyle = DEFAULTS.weekStyle;
+  if (!['classic', 'orka', 'nordurljos', 'solarlag', 'jokull'].includes(o.sportPalette)) o.sportPalette = DEFAULTS.sportPalette;
   o.sports = (Array.isArray(o.sports) ? o.sports : []).filter(id => SPORT_IDS.includes(id));
   if (!o.sports.length) o.sports = DEFAULTS.sports.slice();
   const hr = Number(o.maxHr); o.maxHr = hr >= 120 && hr <= 230 ? Math.round(hr) : null;
@@ -100,6 +103,7 @@ export function applyAppearance(s){
   r.dataset.palette = s.palette;
   r.dataset.text = s.textSize;
   r.dataset.glass = s.glass;
+  if (s.sportPalette && s.sportPalette !== 'classic') r.dataset.sportpal = s.sportPalette; else delete r.dataset.sportpal;
   const p = PALETTES.find(x => x.id === s.palette) || PALETTES[0];
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute('content', (prefersDark(s) ? p.dark : p.light)[0]);
