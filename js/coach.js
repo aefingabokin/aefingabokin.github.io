@@ -34,6 +34,7 @@ export const EXMETA = Object.fromEntries(Object.entries({
   'Brjóstpressa í vél': M('chest', 'c', 'mach', 1), 'Flugur (fly)': M('chest', 'i', 'db', 1), 'Hallandi handlóðapressa': M('chest', 'c', 'db', 1),
   'Niðurhallandi bekkpressa': M('chest', 'c', 'bar', 2), 'Kapalkross': M('chest', 'i', 'cable', 1), 'Flugur í vél (pec deck)': M('chest', 'i', 'mach', 1),
   'Armbeygjur': M('chest', 'c', 'bw', 1, 1), 'Dýfur': M('chest', 'c', 'bw', 2, 1),
+  'Breið brjóstpressa í vél': M('chest', 'c', 'mach', 1),
   'Niðurtog (pull down)': M('back', 'c', 'cable', 1), 'Kapalróður': M('back', 'c', 'cable', 1), 'Handlóðaróður': M('back', 'c', 'db', 1),
   'Upphífingar': M('back', 'c', 'bw', 2, 1), 'Réttstöðulyfta': M('back', 'c', 'bar', 3), 'Bakfettur': M('back', 'i', 'bw', 1, 1),
   'Stangaróður': M('back', 'c', 'bar', 2), 'T-stangarróður': M('back', 'c', 'bar', 2), 'Róður í vél': M('back', 'c', 'mach', 1),
@@ -67,7 +68,7 @@ const SLOTS = {
   chest: [
     S('main', ['Bekkpressa', 'Handlóðapressa'], ['Brjóstpressa í vél', 'Handlóðapressa']),
     S('main2', ['Hallandi handlóðapressa', 'Hallandi bekkpressa'], ['Hallandi handlóðapressa']),
-    S('acc', ['Dýfur', 'Brjóstpressa í vél', 'Niðurhallandi bekkpressa', 'Armbeygjur'], ['Brjóstpressa í vél', 'Armbeygjur']),
+    S('acc', ['Dýfur', 'Breið brjóstpressa í vél', 'Brjóstpressa í vél', 'Niðurhallandi bekkpressa', 'Armbeygjur'], ['Brjóstpressa í vél', 'Breið brjóstpressa í vél', 'Armbeygjur']),
     S('iso', ['Kapalkross', 'Flugur í vél (pec deck)', 'Flugur (fly)']),
     S('iso', ['Þríhöfðapressa (pushdown)', 'Þríhöfðalenging yfir höfuð', 'Franskar pressur']),
     S('iso', ['Hliðarlyftur', 'Hliðarlyftur í kapli'])],
