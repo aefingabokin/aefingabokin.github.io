@@ -131,6 +131,30 @@ endurtekninga hækkar þyngdin næst (+5 kg í fótum og rassi með stöng, +2 k
 þyngd og markmiðið ein endurtekning í viðbót. Í æfingunni sést markmið, hvíld og tillaga, hvíldarteljarinn lætur vita
 (og síminn titrar) þegar hvíldin er búin, og fyrsta æfing í styrk fær upphitunarsett.
 
+## Fleiri eiginleikar (útgáfa 3.2)
+
+- **Vöðvar vikunnar** (forsíðuspjald): mynd af líkamanum framan og aftan sem litast eftir fjölda setta á hvern vöðvahóp,
+  borið saman við ráðlögð 10–20 sett á viku, með ábendingu ef ójafnvægi er (t.d. mun meira brjóst en bak).
+- **Vikusamantekt** (sunnudaga og mánudaga á forsíðu) og **Árið þitt** (Framfarir → Merki): tölur, samanburður við
+  fyrri viku, vikur í röð og íþróttir. **Deila sem mynd** býr til 1080×1920 mynd fyrir Instagram Story.
+- **Merki og áfangar** (Framfarir → Merki): 34 merki, t.d. 100 æfingar, Hringvegurinn (1.322 km), Esjan og
+  Hvannadalshnúkur í samanlagðri hækkun, 100 tonn lyft, laugar og vikur í röð. Nýtt merki fær fagnaðarskjá.
+- **Laugaleikurinn**: kort eftir landshlutum sem fyllist eftir því hve margar laugar hafa verið heimsóttar.
+- **Fljótleg skráning**: „Sama og síðast“ fyrir síðustu æfingar og **sniðmát** sem eru vistuð úr skráningu
+  („Vista sem sniðmát“).
+- **Staðfesting netfangs**: við nýskráningu með netfangi er sendur staðfestingarpóstur og áminning birtist á
+  forsíðunni þar til netfangið er staðfest.
+
+## Tegundir setta, drop sett og súpersett (lyftingar)
+
+- Fyrir ofan hvert sett: **Venjulegt · Drop · Upphitun · Til þrots**. Upphitunarsett eru merkt **U** og teljast ekki í
+  met, magn eða markmið. Til þrots er merkt **Þ**.
+- **Drop sett**: byrjunarþyngdin er skráð og appið leggur til um 20% léttara drop. Dropin eru skráð án hvíldar og
+  vistast í sama setti (`sets[i].drops`), sýnd sem „70 kg × 8 ↘ 55 × 7 ↘ 45 × 9“ með merkinu **D**.
+- **Súpersett**: „Para í súpersett“ tengir æfingar saman (`exercises[i].ss` = A, B …), með tillögum eins og bak og
+  tvíhöfði eða andstæða vöðva. Appið fer sjálft A1 → A2 án hvíldar og byrjar hvíldina eftir umferðina.
+- Leit að æfingum virkar á íslensku og ensku, t.d. „lat pulldown“ finnur Niðurtog.
+
 ## CrossFit
 
 CrossFit-skráningin er höfð einföld, því flest box nota sitt eigið app fyrir æfingu dagsins: box, æfing dagsins í einni línu,
