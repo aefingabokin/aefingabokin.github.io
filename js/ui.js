@@ -83,6 +83,8 @@ const TYPES = {
   other:  { name: 'Annað', hint: 'Allt sem passar ekki annars staðar', unit: 'km', fields: ['title', 'distance', 'dur'], pace: null, titleLabel: 'Hvað var gert?', titlePh: 't.d. skautar eða sjósund' }
 };
 const GOOGLE_G = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+const CHECKC = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M7.8 12.3l2.9 2.9 5.6-6.1"/></svg>';
+const CHECK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 const PENCIL = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg>';
 const GRIP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M5 8h14M5 12h14M5 16h14"/></svg>';
 const MAIL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 6.5l8.5 6.5 8.5-6.5"/></svg>';
@@ -258,7 +260,7 @@ const LIB = [
     'Bekkpressa|bench press', 'Hallandi bekkpressa|incline bench press', 'Handlóðapressa|dumbbell press db bench',
     'Brjóstpressa í vél|chest press machine', 'Flugur (fly)|fly flyes dumbbell fly', 'Hallandi handlóðapressa|incline dumbbell press db',
     'Niðurhallandi bekkpressa|decline bench press', 'Kapalkross|cable crossover cable fly', 'Flugur í vél (pec deck)|pec deck machine fly',
-    'Armbeygjur|push up pushups']],
+    'Armbeygjur|push up pushups', 'Breið brjóstpressa í vél|wide chest press machine wide grip chest press iso lateral']],
   ['Bak', [
     'Niðurtog (pull down)|lat pulldown', 'Kapalróður|seated cable row', 'Handlóðaróður|dumbbell row one arm row',
     'Upphífingar|pull up pullups', 'Réttstöðulyfta|deadlift', 'Bakfettur|back extension hyperextension',
@@ -328,11 +330,22 @@ const fail = what => e => { console.error(e); toast(`${what} tókst ekki${naviga
 const inviteLink = () => `${location.origin}${location.pathname}?join=${hid}`;
 
 /* ---------- Útreikningar ---------- */
-const setVol = st => (num(st.kg) || 0) * (num(st.reps) || 0);
+const setVol = st => st.type === 'warm' ? 0 : (num(st.kg) || 0) * (num(st.reps) || 0) + (st.drops || []).reduce((a, x) => a + (num(x.kg) || 0) * (num(x.reps) || 0), 0);
 const e1rm = (kg, reps) => (!kg || !reps) ? 0 : (reps === 1 ? kg : kg * (1 + reps / 30));
 const sessionVolume = s => (s.exercises || []).reduce((a, e) => a + e.sets.reduce((b, st) => b + setVol(st), 0), 0);
-const setCount = s => (s.exercises || []).reduce((a, e) => a + e.sets.filter(st => num(st.reps)).length, 0);
+const setCount = s => (s.exercises || []).reduce((a, e) => a + e.sets.filter(st => num(st.reps) && st.type !== 'warm').length, 0);
 const setTxt = st => `${nf(num(st.kg), 1)} kg × ${num(st.reps) ?? 0}`;
+/* Sett með droppum: „80 kg × 8 ↘ 60 × 7 ↘ 45 × 8“ */
+const setTxtFull = (st, html) => setTxt(st) + (st.drops || []).map(x => `${html ? ` <span class="dropar">${DROPI}</span> ` : ' ↘ '}${nf(num(x.kg), 1)} × ${num(x.reps) ?? 0}`).join('');
+const setTag = (st, n) => st.type === 'warm' ? '<span class="tg w">U</span>' : st.type === 'drop' ? `<span class="tg d">D</span> ${n}` : st.type === 'fail' ? `<span class="tg f">Þ</span> ${n}` : `Sett ${n}`;
+const LINKI = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>';
+const DROPI = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7l10 10M17 9v8H9"/></svg>';
+/* Súpersett: æfingar í röð með sama staf (A, B, …) */
+function ssGroup(exs, i){
+  const e = exs[i]; if (!e || !e.ss) return null;
+  const idx = exs.map((x, k) => x.ss === e.ss ? k : -1).filter(k => k >= 0);
+  return idx.length > 1 ? { letter: e.ss, idx } : null;
+}
 function paceText(type, dist, min, sub){
   if (!dist || !min) return null;
   const p = typeCfg(type, sub).pace;
@@ -357,7 +370,7 @@ function lastPerformance(exId, excludeId, pid){
   const list = mySessions(pid).filter(s => (s.exercises || []).length && s.id !== excludeId).sort(byDateDesc);
   for (const s of list){
     const e = (s.exercises || []).find(x => x.exId === exId);
-    if (e && e.sets.some(st => num(st.reps))) return {date: s.date, sets: e.sets.filter(st => num(st.reps))};
+    if (e && e.sets.some(st => num(st.reps) && st.type !== 'warm')) return {date: s.date, sets: e.sets.filter(st => num(st.reps) && st.type !== 'warm')};
   }
   return null;
 }
@@ -399,7 +412,7 @@ const runPool = pid => state.sessions.filter(x => x.profileId === pid && x.type 
 function liftHistory(exId, pid = state.active){
   return mySessions(pid).filter(s => (s.exercises || []).length).map(s => {
     const e = (s.exercises||[]).find(x => x.exId === exId); if (!e) return null;
-    const sets = e.sets.filter(st => num(st.reps)); if (!sets.length) return null;
+    const sets = e.sets.filter(st => num(st.reps) && st.type !== 'warm'); if (!sets.length) return null;
     return {date: s.date, sets, best: Math.max(...sets.map(st => num(st.kg) || 0)),
       rm: Math.max(...sets.map(st => e1rm(num(st.kg)||0, num(st.reps)||0))),
       vol: sets.reduce((a, st) => a + setVol(st), 0), maxReps: Math.max(...sets.map(st => num(st.reps) || 0))};
@@ -580,6 +593,8 @@ function renderHome(){
       <div class="stat glass"><div class="l">Tími</div><div class="v">${nf(mins)} <small>mín</small></div></div>
     </div>`,
     kudos: installCard('home') + commentCard() + kudosCard(),
+    summary: summaryCard(),
+    muscles: musclesCard(days),
     goals: state.active === me.uid ? homeGoalsCard() : '',
     recent: `<h2>Síðustu æfingar</h2>
     ${recent.length ? `<ul class="list glass">${recent.map(itemHtml).join('')}</ul>` : `<div class="glass empty">Ekkert skráð ennþá. Fyrsta æfingin birtist hér um leið og hún er vistuð.</div>`}`,
@@ -589,7 +604,7 @@ function renderHome(){
   /* Skráð er með hnappinum fyrir miðju í flipastikunni, svo enginn sér hnappur á forsíðunni */
   /* Á breiðum skjá (t.d. opinn Fold á hlið) fara stóru spjöldin í aðaldálk og hin í hliðardálk.
      order heldur röðinni sem notandinn valdi þegar allt er í einum dálki. */
-  const SIDE = ['goals', 'kudos', 'prs'];
+  const SIDE = ['goals', 'kudos', 'prs', 'summary', 'muscles'];
   let mainHtml = '', sideHtml = '';
   settings.homeCards.filter(id => !settings.homeHidden.includes(id)).forEach((id, i) => {
     if (!parts[id]) return;
@@ -597,6 +612,7 @@ function renderHome(){
     if (SIDE.includes(id)) sideHtml += h; else mainHtml += h;
   });
   view.innerHTML = `
+    ${verifyBanner()}
     <div class="hhead"><div class="eyebrow">${DAYSFULL[now.getDay()]} ${now.getDate()}. ${MONFULL[now.getMonth()]}</div>
     <h1>${title}</h1></div>
     <div class="homegrid"><div class="hmain">
@@ -631,6 +647,7 @@ function renderLog(){
         <button class="ibtn" data-act="importhelp" aria-label="Leiðbeiningar fyrir hvert úr">i</button></div>` : ''}
       ${sportOn('lift') && state.active === me.uid ? `<button class="plancard glass" data-act="planopen"><span class="pic">${sportIcon('lift', 22)}</span>
         <span><b>Æfingaplan</b><span class="tiny">Veldu vöðvaflokk og markmið, appið setur upp æfinguna fyrir þig</span></span>${ICON.r}</button>` : ''}
+      ${state.active === me.uid ? quickSection() : ''}
       <div class="types">${mine.map(k => { const T = TYPES[k]; return `<button class="type glass" style="--tc:${tc(k)}" data-newtype="${k}"><i></i><b>${T.name}</b><span>${T.hint}</span></button>`; }).join('')}</div>
       ${rest.length ? `<details class="more"${ui.moreOpen ? ' open' : ''}><summary>Fleiri íþróttir</summary><div class="opts" style="padding:8px 0 0">${rest.map(k => `<button class="chip spachip" data-newtype="${k}"><i style="background:${tc(k)}"></i>${TYPES[k].name}</button>`).join('')}</div>
         <p class="tiny">Veldu í Stillingum hvaða íþróttir birtast sem flísar.</p></details>` : ''}`;
@@ -640,10 +657,10 @@ function renderLog(){
 }
 const isNewDraft = () => !state.sessions.some(s => s.id === draft.id);
 function edTop(){
-  return `<div class="ed-top">
+  return `${draft.profileId !== me.uid ? `<div class="forwho">${avatar(draft.profileId, 22, pname(draft.profileId))}<span>Skráð á <b>${esc(pname(draft.profileId))}</b></span></div>` : ''}<div class="ed-top">
     <button class="roundbtn glass" data-act="cancel" aria-label="${isNewDraft() ? 'Hætta við' : 'Loka'}">${ICON.x}</button>
     ${draft.startedAt ? `<span class="timer" data-timer="session"></span>` : `<span class="timer">${fmtDate(draft.date)}</span>`}
-    <button class="btn primary" data-act="savelog">${draft.type === 'lift' ? 'Klára' : 'Vista'}</button></div>`;
+    <button class="btn primary finishbtn" data-act="savelog">${draft.type === 'lift' && isNewDraft() ? `${CHECKC} Ljúka æfingu` : 'Vista'}</button></div>`;
 }
 function renderLift(){
   const exs = draft.exercises;
@@ -658,19 +675,37 @@ function renderLift(){
   } else {
     const last = lastSetsOf(ex), lp = lastPerformance(ex.exId, draft.id, draft.profileId);
     const editing = draft.editSet != null, si = editing ? draft.editSet : ex.sets.length;
-    const prevSame = last[si], cur = ex.cur || (ex.cur = suggestion(ex)), next = exs[draft.cur + 1];
+    const dropping = !editing && draft.dropOf != null && ex.sets[draft.dropOf] ? ex.sets[draft.dropOf] : null;
+    const stype = editing ? (ex.sets[si] && ex.sets[si].type) || 'normal' : dropping ? 'drop' : (draft.setType || 'normal');
+    const workN = ex.sets.filter(st => st.type !== 'warm').length;     /* vinnusett (upphitun telst ekki með) */
+    const wi = editing ? ex.sets.slice(0, si + 1).filter(st => st.type !== 'warm').length : workN + 1;
+    const prevSame = last[wi - 1], cur = ex.cur || (ex.cur = suggestion(ex));
+    const g = ssGroup(exs, draft.cur), gi = g ? g.idx.indexOf(draft.cur) : -1;
+    const next = g ? exs[g.idx[g.idx.length - 1] + 1] : exs[draft.cur + 1];
+    const round = g ? Math.min(...g.idx.map(i => exs[i].sets.filter(st => st.type !== 'warm').length)) + 1 : 0;
+    const setLabel = editing ? `${PENCIL} Breyta ${stype === 'warm' ? 'upphitunarsetti' : `setti ${wi}`}` : stype === 'warm' ? 'Upphitunarsett' : dropping ? `Sett ${workN} · drop ${dropping.drops.length + 1}` : `Sett ${wi}`;
+    const btnLabel = dropping ? `Skrá drop ${dropping.drops.length + 1}` : stype === 'warm' ? 'Skrá upphitun' : stype === 'drop' ? 'Skrá byrjun' : g ? `Skrá ${g.letter}${gi + 1}` : `Skrá sett ${wi}`;
+    const jl = !editing && justLogged && justLogged.ei === draft.cur && Date.now() - justLogged.at < 1100;
     body = `
       ${draft.plan ? `<div class="planbar"><span class="pill">${esc(draft.plan.name)}</span><span class="pill">${GOALS[draft.plan.goal] ? GOALS[draft.plan.goal].name : ''}</span></div>` : ''}
       <div class="exhead">
-        <div class="k">Æfing ${draft.cur + 1} af ${exs.length}</div>
-        <div class="nm">${esc(ex.name || exName(ex.exId))}</div>
-        <div class="last">${lp ? `Síðast ${fmtDate(lp.date)}: ${lp.sets.map(setTxt).join(', ')}` : 'Fyrsta skiptið, engar fyrri tölur'}</div>
+        <div class="k ${g ? 'ssk' : ''}">${g ? `${LINKI} Súpersett ${g.letter} · umferð ${round}` : `Æfing ${draft.cur + 1} af ${exs.length}`}</div>
+        <div class="nm">${g ? `<span class="ssb">${g.letter}${gi + 1}</span>` : ''}${esc(ex.name || exName(ex.exId))}</div>
+        <div class="last">${lp ? `Síðast ${fmtDate(lp.date)}: ${lp.sets.map(setTxtFull).join(', ')}` : 'Fyrsta skiptið, engar fyrri tölur'}</div>
+        ${g ? `<div class="ssrow">${g.idx.map((i, k) => `<button class="ssmini ${i === draft.cur ? 'on' : ''}" data-act="curex" data-ei="${i}"><b>${g.letter}${k + 1}</b> ${esc(exs[i].name || exName(exs[i].exId))}</button>`).join(`<span aria-hidden="true">${LINKI}</span>`)}
+            <button class="linkbtn" data-act="ssunpair">Losa</button></div>`
+          : `<button class="linkbtn sslink" data-act="ssopen">${LINKI} Para í súpersett</button>`}
       </div>
       ${planTargetBox(ex)}
       ${ex.t && ex.t.note && !ex.sets.length ? `<div class="tiny" style="margin:-4px 4px 10px">${esc(ex.t.note)}</div>` : ''}
-      <section class="glass setcard" aria-label="Sett ${si + 1}">
-        <div class="row1"><b>${editing ? `Breyta setti ${si + 1}` : `Sett ${si + 1}`}</b>
-          ${prevSame ? `<span class="lastpill"><span>Síðast </span>${setTxt(prevSame)}</span>` : (last.length ? `<span class="lastpill"><span>Síðast ${last.length} sett</span></span>` : '')}</div>
+      <section class="glass setcard ${stype !== 'normal' ? 'st-' + stype : ''}" aria-label="${stype === 'warm' ? 'Upphitunarsett' : `Sett ${wi}`}">
+        <div class="row1"><b>${setLabel}</b>
+          ${prevSame && stype !== 'warm' ? `<span class="lastpill"><span>Síðast </span>${setTxtFull(prevSame)}</span>` : (last.length && stype !== 'warm' ? `<span class="lastpill"><span>Síðast ${last.length} sett</span></span>` : '')}</div>
+        ${!editing && !dropping ? `<div class="stypes" role="group" aria-label="Tegund setts">${[['normal', 'Venjulegt'], ['drop', 'Drop'], ['warm', 'Upphitun'], ['fail', 'Til þrots']].map(([k, l]) =>
+          `<button data-act="settype" data-v="${k}" aria-pressed="${stype === k}" class="sty-${k}">${l}</button>`).join('')}</div>` : ''}
+        ${dropping ? `<ul class="droprows"><li class="dr done"><span class="tg d">1</span><span>Byrjun</span><b>${setTxt(dropping)}</b>${CHECK}</li>
+          ${dropping.drops.map((x, k) => `<li class="dr done"><span class="tg d">${k + 2}</span><span>Drop ${k + 1}</span><b>${setTxt(x)}</b>${CHECK}</li>`).join('')}
+          <li class="dr cur"><span class="tg d">${dropping.drops.length + 2}</span><span>Drop ${dropping.drops.length + 1}</span><span class="tiny">${DROPI} léttara, engin hvíld</span></li></ul>` : ''}
         <div class="stepper">
           <button data-act="step" data-k="kg" data-d="-1" aria-label="Minnka þyngd">−</button>
           <div class="val"><input data-cur="kg" inputmode="decimal" autocomplete="off" aria-label="Þyngd í kg" value="${esc(cur.kg)}" placeholder="0"><div class="u">kg</div></div>
@@ -682,24 +717,31 @@ function renderLift(){
           <div class="val"><input data-cur="reps" inputmode="numeric" autocomplete="off" aria-label="Endurtekningar" value="${esc(cur.reps)}" placeholder="0"><div class="u">reps</div></div>
           <button data-act="step" data-k="reps" data-d="1" aria-label="Fleiri reps">+</button>
         </div>
-        <button class="bigbtn" data-act="doneset">${editing ? 'Uppfæra sett' : 'Klára sett'}</button>
+        ${editing ? `<button class="bigbtn" data-act="doneset">Uppfæra sett</button>`
+          : `<div class="setbtns">${jl ? `<button class="bigbtn logged" data-act="doneset" aria-live="polite">${CHECK} ${esc(justLogged.label)}</button>` : `<button class="bigbtn" data-act="doneset">${btnLabel}</button>`}
+            ${dropping ? `<button class="bigbtn alt" data-act="dropend">Ljúka setti<small>${dropping.drops.length + 1} ${dropping.drops.length ? 'þyngdir' : 'þyngd'}</small></button>`
+              : `<button class="bigbtn alt" data-act="donelast" aria-label="Skrá síðasta settið og ${next ? `fara í ${esc(next.name || exName(next.exId))}` : 'velja næstu æfingu'}">Næsta æfing →<small>${next ? esc(next.name || exName(next.exId)) : 'Velja æfingu'}</small></button>`}</div>`}
         ${editing ? `<button class="btn ghost block" data-act="canceledit">Hætta við breytingu</button>` : ''}
+        ${g && !editing && !dropping ? `<div class="tiny ssnote">${gi < g.idx.length - 1 ? `Engin hvíld: næst kemur ${g.letter}${gi + 2} ${esc(exs[g.idx[gi + 1]].name || exName(exs[g.idx[gi + 1]].exId))}` : 'Hvíld eftir þetta sett, svo aftur í ' + g.letter + '1'}</div>` : ''}
       </section>
-      ${draft.lastSetAt ? `<div class="rest glass" data-rest ${ex.t ? `data-target="${ex.t.rest}"` : ''}><span class="muted">Hvíld</span><b data-timer="rest"></b>${ex.t ? `<span class="tiny" data-resthint>af ${restTxt(ex.t.rest)}</span>` : ''}</div>` : ''}
-      ${ex.sets.length ? `<ul class="done glass list">${ex.sets.map((st, i) => { const c = compare(st, last[i]);
-        return `<li><span class="sn">Sett ${i + 1}</span>
-          <button class="sv" data-act="editset" data-si="${i}" aria-label="Breyta setti ${i + 1}">${setTxt(st)}<small>${last[i] ? `Síðast ${setTxt(last[i])}` : 'Ekkert sett síðast'}</small></button>
+      ${draft.lastSetAt && !dropping ? `<div class="rest glass" data-rest ${ex.t ? `data-target="${ex.t.rest}"` : ''}><span class="muted">Hvíld</span><b data-timer="rest"></b>${ex.t ? `<span class="tiny" data-resthint>af ${restTxt(ex.t.rest)}</span>` : ''}</div>` : ''}
+      ${ex.sets.length ? `<div class="donehint tiny">${PENCIL} Ýttu á sett til að laga þyngd eða endurtekningar</div>
+      <ul class="done glass list" aria-label="Skráð sett, nýjasta efst">${(() => { let wn = 0; return ex.sets.map((st, i) => { const work = st.type !== 'warm'; if (work) wn++;
+        const c = work ? compare(st, last[wn - 1]) : null, tag = setTag(st, wn);
+        return `<li class="${draft.editSet === i ? 'editing' : ''}${justLogged && justLogged.ei === draft.cur && justLogged.si === i && Date.now() - justLogged.at < 1100 ? ' fresh' : ''}${st.type ? ' t-' + st.type : ''}"><span class="sn">${tag}</span>
+          <button class="sv" data-act="editset" data-si="${i}" aria-label="Breyta ${work ? `setti ${wn}` : 'upphitunarsetti'}: ${setTxtFull(st)}">${setTxtFull(st, true)}<small>${draft.editSet === i ? 'Verið að breyta' : !work ? 'Upphitun, telst ekki í met' : st.type === 'fail' ? 'Til þrots' : last[wn - 1] ? `Síðast ${setTxtFull(last[wn - 1])}` : 'Ekkert sett síðast'}</small></button>
+          <span class="svpen" aria-hidden="true">${PENCIL}</span>
           <span class="cmp ${c && !c.up ? 'down' : ''}">${c ? c.t : ''}</span>
-          <button class="xbtn" data-act="rmset" data-si="${i}" aria-label="Eyða setti ${i + 1}">${ICON.x}</button></li>`; }).join('')}</ul>` : ''}
+          <button class="xbtn" data-act="rmset" data-si="${i}" aria-label="Eyða setti">${ICON.x}</button></li>`; }).reverse().join(''); })()}</ul>` : ''}
       <div style="display:flex;gap:10px;margin-top:12px">
-        ${next ? `<button class="btn primary ${ex.t && ex.sets.length >= ex.t.sets ? 'pulse' : ''}" style="flex:1" data-act="curex" data-ei="${draft.cur + 1}">Næst: ${esc(next.name || exName(next.exId))}</button>` : `<button class="btn primary" style="flex:1" data-act="pickex">Bæta við æfingu</button>`}
+        ${next ? `<button class="btn primary ${ex.t && workN >= ex.t.sets ? 'pulse' : ''}" style="flex:1" data-act="curex" data-ei="${exs.indexOf(next)}">Næst: ${esc(next.name || exName(next.exId))}</button>` : `<button class="btn primary" style="flex:1" data-act="pickex">Bæta við æfingu</button>`}
       </div>`;
   }
   view.innerHTML = `${edTop()}
     ${!isNewDraft() ? `<div class="editbar glass">${PENCIL}<span><b>Þú ert að breyta æfingu</b><span class="tiny">Breytingar vistast þegar þú ýtir á Vista.</span></span>
       <label class="edate"><span class="tiny">Dagsetning</span><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}"></label></div>` : ''}
     <div class="chips" role="group" aria-label="Æfingar í þessari lotu">
-      ${exs.map((e, i) => `<button class="chip" data-act="curex" data-ei="${i}" aria-pressed="${i === draft.cur}">${esc(e.name || exName(e.exId))}<small>${e.sets.length}</small></button>`).join('')}
+      ${exs.map((e, i) => `${e.ss && i > 0 && exs[i - 1].ss === e.ss ? `<span class="sschain" aria-hidden="true">${LINKI}</span>` : ''}<button class="chip ${e.ss ? 'ssc' : ''}" data-act="curex" data-ei="${i}" aria-pressed="${i === draft.cur}">${e.ss ? `<b class="ssl">${e.ss}${exs.slice(0, i + 1).filter(x => x.ss === e.ss).length}</b>` : ''}${esc(e.name || exName(e.exId))}<small>${e.sets.filter(st => st.type !== 'warm').length}</small></button>`).join('')}
       <button class="chip" data-act="pickex">+ Æfing</button>
     </div>
     ${body}
@@ -711,7 +753,8 @@ function renderLift(){
     </div>
     ${spaEditor()}
     ${ex ? `<button class="btn ghost block" style="margin-top:12px" data-act="rmex">Fjarlægja ${esc(ex.name || exName(ex.exId))} úr lotunni</button>` : ''}
-    <button class="cta savebottom" data-act="savelog">${isNewDraft() ? 'Vista æfingu' : 'Vista breytingar'}</button>
+    <button class="cta savebottom" data-act="savelog">${isNewDraft() ? `${CHECKC} Ljúka æfingu` : 'Vista breytingar'}</button>
+    <button class="btn ghost block" style="margin-top:8px" data-act="tplopen">Vista sem sniðmát</button>
     ${shareRow()}
     ${!isNewDraft() ? commentsBlock(draft.profileId, draft.id, draft.profileId === me.uid ? null : draft) : ''}
     ${!isNewDraft() ? `<button class="btn ghost danger block" data-act="dellog">Eyða þessari æfingu</button>` : ''}`;
@@ -772,6 +815,7 @@ function renderCardio(){
     <label class="f" for="notes">Athugasemd</label>
     <textarea class="in" id="notes" data-field="notes" placeholder="Hvernig gekk?">${esc(draft.notes ?? '')}</textarea>
     <button class="cta savebottom" data-act="savelog">${isNewDraft() ? 'Vista æfingu' : 'Vista breytingar'}</button>
+    <button class="btn ghost block" style="margin-top:8px" data-act="tplopen">Vista sem sniðmát</button>
     ${shareRow()}
     ${!isNewDraft() ? commentsBlock(draft.profileId, draft.id, draft.profileId === me.uid ? null : draft) : ''}
     ${!isNewDraft() ? `<button class="btn ghost danger block" style="margin-top:10px" data-act="dellog">Eyða þessari æfingu</button>` : ''}`;
@@ -786,10 +830,12 @@ function spaStats(){
 }
 function spaEditor(){
   const list = draft.spa || [], open = draft.type === 'swim' || list.length || draft.spaOpen;
-  if (!open) return `<button class="btn block" style="margin-top:12px" data-act="spaopen">+ Gufa, sauna eða pottur</button>`;
+  /* Samanbrotið: flýtihnappar beint, svo einn smellur dugi fyrir t.d. gufu og kalda pottinn eftir æfingu */
+  if (!open) return `<section class="glass spaquick"><div class="tiny">Gufa, sauna, heitur eða kaldur pottur eftir æfinguna?</div>
+    <div class="opts">${['sauna', 'steam', 'cold', 'hot', 'infrared'].map(k => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${SPA[k].color}"></i>+ ${SPA[k].short === 'Kalt' ? 'Kaldur pottur' : SPA[k].short}</button>`).join('')}</div></section>`;
   return `<section class="glass spaed">
     <div class="slabel" style="padding:14px 16px 4px">Gufa og pottar<div class="tiny">Bættu við í þeirri röð sem þú fórst, t.d. sauna, kalt, sauna, kalt</div></div>
-    <div class="opts" style="padding:6px 16px 10px">${Object.entries(SPA).map(([k, v]) => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${v.color}"></i>${v.short}</button>`).join('')}</div>
+    <div class="opts" style="padding:6px 16px 10px">${Object.entries(SPA).map(([k, v]) => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${v.color}"></i>${v.short === 'Kalt' ? 'Kaldur pottur' : v.short}</button>`).join('')}</div>
     ${list.length ? `<ul class="sparows">${list.map((x, i) => `<li>
       <span class="spn"><i style="background:${SPA[x.kind].color}"></i>${SPA[x.kind].name}</span>
       <button class="mv" data-act="spastep" data-i="${i}" data-d="-1" aria-label="Mínútu styttra">−</button>
@@ -849,7 +895,7 @@ function saveLog(){
     durationMin: parseDur(d.durRaw), createdAt: d.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
     createdBy: d.createdBy || me.uid };
   if (d.type === 'lift'){
-    s.exercises = d.exercises.map(e => ({exId: e.exId, name: e.name || exName(e.exId), sets: e.sets.map(st => ({kg: num(st.kg) ?? 0, reps: num(st.reps) ?? 0})), ...(e.t ? { t: { sets: e.t.sets, lo: e.t.lo, hi: e.t.hi, role: e.t.role || null, slot: e.t.slot || null } } : {})})).filter(e => e.sets.length);
+    s.exercises = d.exercises.map(e => ({exId: e.exId, name: e.name || exName(e.exId), sets: e.sets.map(st => ({kg: num(st.kg) ?? 0, reps: num(st.reps) ?? 0, ...(st.type && st.type !== 'normal' ? { type: st.type } : {}), ...((st.drops || []).length ? { drops: st.drops.map(x => ({ kg: num(x.kg) ?? 0, reps: num(x.reps) ?? 0 })) } : {})})), ...(e.ss ? { ss: e.ss } : {}), ...(e.t ? { t: { sets: e.t.sets, lo: e.t.lo, hi: e.t.hi, role: e.t.role || null, slot: e.t.slot || null } } : {})})).filter(e => e.sets.length);
     s.plan = d.plan || null;
     if (!s.exercises.length) return toast('Kláraðu að minnsta kosti eitt sett');
     s.spa = spaParsed(); if (!s.spa.length) s.spa = null;
@@ -895,7 +941,7 @@ function saveLog(){
   if (Store.putShared && lvl !== 'none'){ const isNewShared = !(shared[s.profileId] || []).some(x => x.id === s.id);
     Store.putShared(s.profileId, sharedOf(s, lvl), isNewShared).catch(e => console.warn(e)); }
   draft = null; saveDraft(); ui.tab = 'home'; ui.weekOffset = 0; render(); window.scrollTo(0, 0);
-  if (wasNew) trackSessions([s]);
+  if (wasNew){ trackSessions([s]); checkNewBadges(); }
   if (s.pb === 'cf' && wasNew && s.profileId === me.uid){ const p0 = s.prs[0], prev = pbBest(pbHistory(s.profileId, p0.key, s.id)), df = pbDiff(p0, prev);
     setTimeout(() => celebrate('Nýtt personal best!', `${p0.name}: ${pbText(p0)}${df ? ` (${df})` : ''}${s.prs.length > 1 ? `, og ${s.prs.length - 1} ${s.prs.length === 2 ? 'annað' : 'önnur'}` : ''}`), 400); }
   else if (s.pb && s.profileId === me.uid) setTimeout(() => celebrate(s.pb === 'long' ? 'Lengsti boltinn þinn!' : 'Nýtt met!',
@@ -968,10 +1014,91 @@ function doneSet(){
   const kg = num(ex.cur.kg), reps = num(ex.cur.reps);
   if (!reps) return toast('Settu inn fjölda reps');
   const st = {kg: kg ?? 0, reps};
-  if (draft.editSet != null){ ex.sets[draft.editSet] = st; draft.editSet = null; toast('Sett uppfært'); }
-  else { ex.sets.push(st); draft.lastSetAt = Date.now(); }
+  if (draft.editSet != null){ const old = ex.sets[draft.editSet] || {}; ex.sets[draft.editSet] = { ...st, ...(old.type ? { type: old.type } : {}), ...(old.drops ? { drops: old.drops } : {}) }; draft.editSet = null; toast('Sett uppfært'); }
+  else if (draft.dropOf != null && ex.sets[draft.dropOf]){
+    /* Drop: léttari þyngd í sama setti, engin hvíld */
+    const base = ex.sets[draft.dropOf]; base.drops = base.drops || []; base.drops.push(st);
+    flashLogged(ex, `Drop ${base.drops.length} skráð`, draft.dropOf);
+    ex.cur = { kg: fmtIn(dropKg(st.kg, ex.exId)), reps: String(st.reps) }; saveDraft(); render(); return;
+  }
+  else {
+    const t = draft.setType || 'normal';
+    if (t !== 'normal') st.type = t;
+    if (t === 'drop'){ st.drops = []; ex.sets.push(st); draft.dropOf = ex.sets.length - 1;
+      flashLogged(ex, 'Byrjun skráð', draft.dropOf); ex.cur = { kg: fmtIn(dropKg(st.kg, ex.exId)), reps: String(st.reps) }; saveDraft(); render(); return; }
+    ex.sets.push(st);
+    const wn = ex.sets.filter(x => x.type !== 'warm').length;
+    flashLogged(ex, t === 'warm' ? 'Upphitun skráð' : `Sett ${wn} skráð`, ex.sets.length - 1);
+    draft.setType = 'normal';   /* næsta sett er venjulegt nema annað sé valið */
+    if (t === 'warm'){ ex.cur = { ...ex.cur }; saveDraft(); render(); return; }
+    afterWorkSet(ex, st); return;
+  }
   ex.cur = ex.t ? { kg: fmtIn(st.kg), reps: String(ex.t.reps) } : suggestion(ex); saveDraft(); render();
 }
+/* Eftir vinnusett: hvíld hefst, eða í súpersetti farið beint í næstu æfingu hópsins */
+function afterWorkSet(ex, st){
+  ex.cur = ex.t ? { kg: fmtIn(st.kg), reps: String(ex.t.reps) } : suggestion(ex);
+  const g = ssGroup(draft.exercises, draft.cur);
+  if (g){
+    const k = g.idx.indexOf(draft.cur);
+    if (k < g.idx.length - 1){ draft.lastSetAt = null; draft.cur = g.idx[k + 1]; }
+    else { draft.lastSetAt = Date.now(); draft.cur = g.idx[0]; }
+    justLogged = null; saveDraft(); render(); window.scrollTo(0, 0); return;
+  }
+  draft.lastSetAt = Date.now(); saveDraft(); render();
+}
+function flashLogged(ex, label, si){
+  justLogged = { ei: draft.cur, si, label, at: Date.now() };
+  if (navigator.vibrate) try { navigator.vibrate(25); } catch(e){}
+  clearTimeout(justLoggedT); justLoggedT = setTimeout(() => { if (draft && curEx() === ex) render(); }, 1150);
+}
+/* Tillaga að næsta dropi: um 20% léttara, námundað að næsta skrefi */
+function dropKg(kg, exId){ const step = (EXMETA[exId] || {}).eq === 'db' ? 2 : 2.5; return Math.max(0, Math.round(kg * 0.8 / step) * step); }
+function endDropSilently(){ const ex = curEx(); const base = ex && ex.sets[draft.dropOf]; if (base && !(base.drops || []).length){ delete base.drops; delete base.type; } draft.dropOf = null; draft.setType = 'normal'; }
+function endDrop(){
+  const ex = curEx(); if (!ex || draft.dropOf == null) return;
+  const base = ex.sets[draft.dropOf]; draft.dropOf = null; draft.setType = 'normal';
+  if (base && !(base.drops || []).length){ delete base.drops; delete base.type; }
+  afterWorkSet(ex, base || { kg: num(ex.cur.kg) || 0 });
+}
+/* ---------- Súpersett: para saman ---------- */
+const SS_PAIRS = { back: ['Curl (tvíhöfði)', 'Hammer curl', 'Axlapressa', 'Face pull'], chest: ['Kapalróður', 'Handlóðaróður', 'Þríhöfðapressa (pushdown)'],
+  shoulders: ['Niðurtog (pull down)', 'Hliðarlyftur', 'Afturaxlaflugur'], arms: ['Þríhöfðapressa (pushdown)', 'Curl (tvíhöfði)', 'Hammer curl', 'Þríhöfðalenging yfir höfuð'],
+  legs: ['Fótakreppa', 'Kálfalyfta', 'Mjaðmalyfta (hip thrust)'], glutes: ['Fótarétta', 'Kálfalyfta', 'Búlgarskt framstig'], core: ['Kviðhjól', 'Pallof-pressa', 'Fótalyftur'] };
+const SS_WHY = { back: { arms: 'Bak og tvíhöfði: klassískt par', shoulders: 'Andstæðir vöðvar: annar hvílist á meðan hinn vinnur' }, chest: { back: 'Brjóst og bak: andstæðir vöðvar', arms: 'Brjóst og þríhöfði: push-par' },
+  shoulders: { back: 'Axlir og bak: andstæðir vöðvar' }, arms: { arms: 'Tvíhöfði og þríhöfði: klassískt hendapar' }, legs: { glutes: 'Fram- og aftanlæri: andstæðir vöðvar', legs: 'Sami vöðvahópur: meira pump' },
+  glutes: { legs: 'Aftan- og framanlæri' } };
+function openSsPair(){
+  const ex = curEx(); if (!ex) return;
+  const m = muscleOf(ex.exId), have = new Map(draft.exercises.map((e, i) => [e.exId, i]));
+  const sugg = (SS_PAIRS[m] || []).map(n => allEx().find(e => e.name === n)).filter(e => e && e.id !== ex.exId);
+  const why = id => { const m2 = muscleOf(id); return (SS_WHY[m] || {})[m2] || (m2 === m ? 'Sami vöðvahópur: meira pump' : ''); };
+  const inSess = draft.exercises.filter((e, i) => i !== draft.cur && !e.ss).map(e => allEx().find(x => x.id === e.exId) || { id: e.exId, name: e.name });
+  const row = (e, best) => `<li><button data-act="sspick" data-id="${esc(e.id)}"><span><b>${esc(e.name)}</b><span class="tiny">${esc(why(e.id) || (have.has(e.id) ? 'Í lotunni' : ''))}</span></span>${best ? '<span class="ssbest">Mælt með</span>' : ICON.r}</button></li>`;
+  openSheet('Para í súpersett', `<p class="muted" style="margin-top:0">Veldu æfingu sem þú tekur til skiptis við <b>${esc(ex.name || exName(ex.exId))}</b>. Hvíldin kemur eftir báðar.</p>
+    ${sugg.length ? `<div class="grp">Passar vel saman</div><ul class="pick sspick">${sugg.map((e, k) => row(e, k === 0)).join('')}</ul>` : ''}
+    ${inSess.length ? `<div class="grp">Aðrar æfingar í dag</div><ul class="pick sspick">${inSess.map(e => row(e, false)).join('')}</ul>` : ''}
+    <input class="in" id="ssq" placeholder="Leita að æfingu, á íslensku eða ensku" autocomplete="off" style="margin-top:12px"><ul class="pick sspick" id="sslist"></ul>
+    <p class="tiny">Súpersett spara tíma. Algengast er að para andstæða vöðva, t.d. brjóst og bak, eða sama vöðva fyrir meira pump. Hægt er að bæta þriðju æfingunni við (þrísett).</p>`);
+  const q = $('#ssq'); q.addEventListener('input', () => { const t = fold(q.value.trim()); $('#sslist').innerHTML = t ? allEx().filter(e => e.id !== ex.exId && fold(e.name + ' ' + (e.alias || '')).includes(t)).slice(0, 12).map(e => row(e, false)).join('') : ''; });
+}
+function ssPair(id){
+  const exs = draft.exercises, cur = exs[draft.cur]; if (!cur) return;
+  const used = new Set(exs.map(e => e.ss).filter(Boolean)), letter = cur.ss || 'ABCDEFGH'.split('').find(l => !used.has(l));
+  cur.ss = letter;
+  let j = exs.findIndex((e, k) => e.exId === id && k !== draft.cur), item;
+  if (j >= 0){ item = exs.splice(j, 1)[0]; if (j < draft.cur) draft.cur--; }
+  else { const e = allEx().find(x => x.id === id); item = { exId: id, name: e ? e.name : exName(id), sets: [] }; item.cur = suggestion(item); }
+  item.ss = letter;
+  const g = exs.map((e, k) => e.ss === letter ? k : -1).filter(k => k >= 0), at = Math.max(...g) + 1;
+  exs.splice(at, 0, item);
+  closeSheet(); saveDraft(); render(); toast(`Súpersett ${letter}: ${exs.filter(e => e.ss === letter).map(e => e.name || exName(e.exId)).join(' + ')}`);
+}
+function ssUnpair(){
+  const exs = draft.exercises, cur = exs[draft.cur]; if (!cur || !cur.ss) return;
+  const l = cur.ss; exs.forEach(e => { if (e.ss === l) delete e.ss; }); draft.lastSetAt = draft.lastSetAt || null; saveDraft(); render(); toast('Súpersett losað');
+}
+let justLogged = null, justLoggedT = null;
 function step(k, dir){
   const ex = curEx(); if (!ex) return;
   const v = num(ex.cur[k]) || 0, inc = k === 'reps' ? 1 : (settings.kgStep === 'auto' ? (v < 20 ? 1 : 2.5) : (parseFloat(settings.kgStep) || 2.5));
@@ -995,6 +1122,7 @@ function renderHistory(){
 /* Framfarir */
 function renderProgress(){
   if (ui.progMode === 'body') return renderBody();
+  if (ui.progMode === 'badges') return renderBadges();
   if (ui.progMode === 'goals') return renderGoals();
   let body = '';
   if (ui.progMode === 'lift'){
@@ -1074,6 +1202,7 @@ function renderProgress(){
           ${elev ? `<div class="glass"><div class="v">${nf(elev)} m</div><div class="l">Samtals hækkun</div></div>
             <div class="glass"><div class="v">${nf(Math.max(...all.map(s => s.elevation || 0)))} m</div><div class="l">Mesta hækkun í einu</div></div>` : ''}
           ${type === 'swim' ? poolStats() + spaStats() : ''}
+          ${type === 'swim' ? `<div class="glass" style="grid-column:1 / -1;padding:14px"><div class="l" style="margin-bottom:6px">Laugaleikurinn</div>${poolGame()}</div>` : ''}
           ${type === 'run' ? (() => { const recent = ss.filter(s => s.date >= since28 && effortOf(s)), easy = recent.filter(s => effortOf(s) === 'easy').length;
             return recent.length ? `<div class="glass" style="grid-column:span 2"><div class="v">${easy} af ${recent.length}</div><div class="l">hlaupum síðustu 4 vikur voru róleg</div></div>` : ''; })() : ''}
           ${subBreak()}
@@ -1700,7 +1829,7 @@ function renderBody(){
         <span class="d">${fmtDate(e.date)}</span></button></li>`; }).join('')}</ul>
     ${ms.length > 15 ? `<p class="tiny">Sýni síðustu 15 af ${ms.length} mælingum. Allar eru með í línuritunum og afritinu.</p>` : ''}`;
 }
-const progressSeg = () => `<div class="seg4 glass">${[['goals', 'Markmið'], ['lift', 'Lyftingar'], ['cardio', 'Íþróttir'], ['body', 'Líkaminn']].map(([k, l]) => `<button data-pm="${k}" aria-pressed="${ui.progMode === k}">${l}</button>`).join('')}</div>`;
+const progressSeg = () => `<div class="seg4 seg5 glass">${[['goals', 'Markmið'], ['lift', 'Lyftingar'], ['cardio', 'Íþróttir'], ['body', 'Líkaminn'], ['badges', 'Merki']].map(([k, l]) => `<button data-pm="${k}" aria-pressed="${ui.progMode === k}">${l}</button>`).join('')}</div>`;
 
 /* ---------- Útflutningur gagna ---------- */
 const XLSX_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
@@ -2718,7 +2847,7 @@ let planSetup = null;
 /* Fyrri skipti æfingar hjá virka notandanum, nýjast fyrst */
 function planHist(id){
   return mySessions().filter(s => (s.exercises || []).some(e => e.exId === id)).sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 6)
-    .map(s => { const e = s.exercises.find(x => x.exId === id); return { date: s.date, sets: (e.sets || []).map(st => ({ kg: num(st.kg) || 0, reps: num(st.reps) || 0 })), t: e.t || null }; });
+    .map(s => { const e = s.exercises.find(x => x.exId === id); return { date: s.date, sets: (e.sets || []).filter(st => st.type !== 'warm').map(st => ({ kg: num(st.kg) || 0, reps: num(st.reps) || 0 })), t: e.t || null }; });
 }
 function planRecent(id){ const h = planHist(id)[0]; return h ? Math.round((parseYmd(today()) - parseYmd(h.date)) / 86400000) : null; }
 /* Hve langt síðan hver vöðvaflokkur var tekinn (til að mæla með næsta flokki) */
@@ -2803,7 +2932,9 @@ function planReplace(i, id){
 function openPlanAdd(){
   const P = ui.planPreview, have = new Set(P.items.map(x => x.exId));
   const byG = Object.keys(GROUPS).map(g => [g, Object.keys(EXMETA).filter(id => EXMETA[id].m === g && !have.has(id))]);
-  openSheet('Bæta við æfingu', byG.map(([g, ids]) => ids.length ? `<div class="grp">${GROUPS[g].name}</div><ul class="pick">${ids.map(id => `<li><button data-act="planaddpick" data-id="${esc(id)}"><span><b>${esc(EXMETA[id].name)}</b></span>${ICON.r}</button></li>`).join('')}</ul>` : '').join(''));
+  openSheet('Bæta við æfingu', `<input class="in" id="paq" placeholder="Leita á íslensku eða ensku" autocomplete="off">` + byG.map(([g, ids]) => ids.length ? `<div class="grp">${GROUPS[g].name}</div><ul class="pick">${ids.map(id => { const lib = allEx().find(e => e.id === id) || {};
+    return `<li data-s="${esc(fold(EXMETA[id].name + ' ' + (lib.alias || '')))}"><button data-act="planaddpick" data-id="${esc(id)}"><span><b>${esc(EXMETA[id].name)}</b></span>${ICON.r}</button></li>`; }).join('')}</ul>` : '').join(''));
+  const q = $('#paq'); if (q) q.addEventListener('input', () => { const t = fold(q.value.trim()); document.querySelectorAll('#sheetBody li[data-s]').forEach(li => { li.hidden = !!t && !li.dataset.s.includes(t); }); });
 }
 function startPlan(){
   const P = ui.planPreview; if (!P) return;
@@ -2817,11 +2948,301 @@ function startPlan(){
 }
 function planTargetBox(ex){
   const t = ex.t; if (!t) return '';
-  const done = ex.sets.length >= t.sets;
+  const wn = ex.sets.filter(st => st.type !== 'warm').length, done = wn >= t.sets;
   return `<div class="ptarget glass ${done ? 'done' : ''}"><div><span class="tiny">Markmið</span><b>${t.sets} × ${t.lo}–${t.hi}</b></div>
     <div><span class="tiny">Hvíld</span><b>${restTxt(t.rest)}</b></div>
     <div><span class="tiny">Tillaga</span><b>${t.kg ? `${nf(t.kg, 1)} kg` : t.kg === 0 ? 'Eigin þyngd' : 'Finndu þyngd'}</b>${t.trend ? `<em class="up">${t.trend}</em>` : ''}</div>
-    <div class="pset">${done ? `${ICON.r} Öll ${t.sets} sett búin` : `Sett ${Math.min(ex.sets.length + 1, t.sets)} af ${t.sets}`}</div></div>`;
+    <div class="pset">${done ? `${ICON.r} Öll ${t.sets} sett búin` : `Sett ${Math.min(wn + 1, t.sets)} af ${t.sets}`}</div></div>`;
+}
+
+/* ================= Vöðvar vikunnar ================= */
+const MUSCLE_ORDER = ['chest', 'back', 'shoulders', 'arms', 'legs', 'glutes', 'core'];
+const LIB_G_MUSCLE = { 'Brjóst': 'chest', 'Bak': 'back', 'Fætur': 'legs', 'Rass og mjaðmir': 'glutes', 'Axlir': 'shoulders', 'Hendur': 'arms', 'Kviður': 'core' };
+const muscleOf = id => (EXMETA[id] || {}).m || LIB_G_MUSCLE[(allEx().find(e => e.id === id) || {}).g] || null;
+function weekMuscleSets(days, pid){
+  const sets = Object.fromEntries(MUSCLE_ORDER.map(m => [m, 0]));
+  state.sessions.filter(s => s.profileId === pid && s.date >= days[0] && s.date <= days[6])
+    .forEach(s => (s.exercises || []).forEach(e => { const m = muscleOf(e.exId); if (m) sets[m] += (e.sets || []).filter(st => st.type !== 'warm').length; }));
+  return sets;
+}
+/* Einföld mynd af líkamanum, framan og aftan; litur eftir fjölda setta (12 sett = fullur litur) */
+function muscleMap(sets){
+  const f = m => { const p = Math.min(100, Math.round((sets[m] || 0) / 12 * 100)); return p ? `color-mix(in srgb, var(--c-lift) ${Math.max(28, p)}%, var(--hair))` : 'var(--hair)'; };
+  const R = (x, y, w, h, m, r = 6) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" style="fill:${m ? f(m) : 'var(--hair)'}"><title>${m ? `${GROUPS[m].name}: ${sets[m]} sett` : ''}</title></rect>`;
+  const C = (x, y, r, m) => `<circle cx="${x}" cy="${y}" r="${r}" style="fill:${m ? f(m) : 'var(--hair)'}"><title>${m ? `${GROUPS[m].name}: ${sets[m]} sett` : ''}</title></circle>`;
+  const fig = (cx, back) => [C(cx, 13, 9, null), R(cx - 4, 21, 8, 6, null, 2),
+    C(cx - 17, 34, 7, 'shoulders'), C(cx + 17, 34, 7, 'shoulders'),
+    back ? R(cx - 14, 28, 28, 16, 'back') + R(cx - 16, 45, 32, 20, 'back') + R(cx - 8, 66, 16, 10, 'back', 4)
+         : R(cx - 14, 29, 13, 17, 'chest') + R(cx + 1, 29, 13, 17, 'chest') + R(cx - 10, 48, 20, 28, 'core'),
+    R(cx - 27, 41, 8, 30, 'arms'), R(cx + 19, 41, 8, 30, 'arms'), R(cx - 28, 73, 7, 22, null, 4), R(cx + 21, 73, 7, 22, null, 4),
+    back ? R(cx - 12, 78, 11, 15, 'glutes') + R(cx + 1, 78, 11, 15, 'glutes') + R(cx - 12, 95, 11, 30, 'glutes') + R(cx + 1, 95, 11, 30, 'glutes')
+         : R(cx - 12, 79, 11, 46, 'legs') + R(cx + 1, 79, 11, 46, 'legs'),
+    R(cx - 11, 128, 9, 28, 'legs'), R(cx + 2, 128, 9, 28, 'legs')].join('');
+  return `<svg class="mmap" viewBox="0 0 200 170" role="img" aria-label="Vöðvakort vikunnar">${fig(50, false)}${fig(150, true)}
+    <text x="50" y="168" text-anchor="middle">Framan</text><text x="150" y="168" text-anchor="middle">Aftan</text></svg>`;
+}
+function musclesCard(days){
+  const sets = weekMuscleSets(days, state.active), total = Object.values(sets).reduce((a, b) => a + b, 0);
+  if (!total) return `<section class="glass mcard"><div class="mhead"><b>Vöðvar vikunnar</b></div>
+    <p class="muted" style="margin:4px 0 10px">Engar lyftingar skráðar í vikunni ennþá.</p>
+    ${state.active === me.uid ? `<button class="btn block" data-act="planopen">Setja upp æfingu</button>` : ''}</section>`;
+  const tips = [];
+  if (sets.chest >= 6 && sets.back < sets.chest * 0.6) tips.push('Bakið fær mun minna en brjóstið. Bættu við róðri eða niðurtogi til að halda jafnvægi í öxlum og líkamsstöðu.');
+  if (sets.legs + sets.glutes === 0 && total >= 10) tips.push('Engar fótaæfingar í vikunni. Fætur og rass eru stærstu vöðvar líkamans.');
+  if (Object.values(sets).some(v => v > 22)) tips.push('Yfir 20 sett á viku á einn vöðvahóp skila litlu meiru. Dreifðu frekar álaginu.');
+  return `<section class="glass mcard"><div class="mhead"><b>Vöðvar vikunnar</b><span class="tiny">${total} sett · ráðlagt 10–20 sett á viku á hvern vöðvahóp</span></div>
+    <div class="mbody">${muscleMap(sets)}
+      <ul class="mlist">${MUSCLE_ORDER.filter(m => m !== 'core' || sets.core).map(m => { const v = sets[m], st = !v ? '' : v < 10 ? 'low' : v <= 20 ? 'ok' : 'high';
+        return `<li><span>${GROUPS[m].name}</span><span class="mbar"><i style="width:${Math.min(100, v / 20 * 100)}%"></i><em></em></span><b class="${st}">${v}</b></li>`; }).join('')}</ul></div>
+    ${tips.length ? `<p class="mtip">${esc(tips[0])}</p>` : ''}</section>`;
+}
+
+/* ================= Vikusamantekt og Árið þitt ================= */
+function periodData(from, to){
+  const ss = mySessions().filter(s => s.date >= from && s.date <= to);
+  const mins = Math.round(ss.reduce((a, s) => a + minsOf(s), 0)), km = ss.reduce((a, s) => a + kmOf(s), 0), vol = ss.reduce((a, s) => a + sessionVolume(s), 0);
+  const byType = {}; ss.forEach(s => { const k = TYPES[s.type] ? s.type : 'other'; byType[k] = (byType[k] || 0) + 1; });
+  const types = Object.entries(byType).sort((a, b) => b[1] - a[1]);
+  const pbs = ss.filter(s => s.pb).length + ss.reduce((a, s) => a + (s.prs || []).length, 0);
+  const days = new Set(ss.map(s => s.date)).size;
+  const pools = {}; ss.forEach(s => { if (s.pool) pools[s.pool] = (pools[s.pool] || 0) + 1; });
+  const topPool = Object.entries(pools).sort((a, b) => b[1] - a[1])[0];
+  const elev = ss.reduce((a, s) => a + (s.elevation || 0), 0);
+  return { ss, n: ss.length, mins, km, vol, types, pbs, days, topPool, elev };
+}
+function weekStreak(){
+  let n = 0, w = weekStart(new Date());
+  const has = d => mySessions().some(s => s.date >= ymd(d) && s.date <= ymd(addDays(d, 6)));
+  if (!has(w)) w = addDays(w, -7);   /* vikan sem er í gangi telur ekki gegn þér */
+  while (has(w) && n < 520){ n++; w = addDays(w, -7); }
+  return n;
+}
+function summaryWeek(){
+  const now = new Date(), dow = now.getDay();
+  if (dow !== 0 && dow !== 1) return null;   /* sunnudagur: vikan sem er að klárast; mánudagur: síðasta vika */
+  const ws = addDays(weekStart(now), dow === 1 ? -7 : 0);
+  return { from: ymd(ws), to: ymd(addDays(ws, 6)), prevFrom: ymd(addDays(ws, -7)), prevTo: ymd(addDays(ws, -1)), last: dow === 1 };
+}
+function summaryCard(){
+  if (state.active !== me.uid) return '';
+  const w = summaryWeek(); if (!w) return '';
+  const d = periodData(w.from, w.to); if (!d.n) return '';
+  return `<button class="glass sumcard" data-act="sumopen"><span class="sumic" aria-hidden="true">${TROPHY}</span>
+    <span><b>${w.last ? 'Síðasta vika' : 'Vikan þín'} í hnotskurn</b><span class="tiny">${d.n} ${d.n === 1 ? 'æfing' : 'æfingar'} · ${nf(d.mins)} mín${d.km ? ` · ${nf(d.km, 1)} km` : ''}${d.pbs ? ` · ${d.pbs} met` : ''}</span></span>
+    <span class="tiny sumgo">Skoða og deila ${ICON.r}</span></button>`;
+}
+function openSummary(){
+  const w = summaryWeek() || (() => { const ws = addDays(weekStart(new Date()), -7); return { from: ymd(ws), to: ymd(addDays(ws, 6)), prevFrom: ymd(addDays(ws, -7)), prevTo: ymd(addDays(ws, -1)), last: true }; })();
+  const d = periodData(w.from, w.to), p = periodData(w.prevFrom, w.prevTo), streak = weekStreak();
+  const diff = p.mins ? Math.round((d.mins - p.mins) / p.mins * 100) : null;
+  ui.share = { kind: 'week', title: w.last ? 'Síðasta vika' : 'Vikan mín', sub: `${fmtDate(w.from)} – ${fmtDate(w.to)}`, d, streak };
+  openSheet(w.last ? 'Síðasta vika í hnotskurn' : 'Vikan þín í hnotskurn', `<p class="tiny" style="margin-top:0">${fmtDate(w.from)} – ${fmtDate(w.to)}</p>
+    <div class="kv">
+      <div class="glass"><div class="v">${d.n}</div><div class="l">Æfingar</div><div class="tiny">${d.days} ${d.days === 1 ? 'dagur' : 'dagar'} með hreyfingu</div></div>
+      <div class="glass"><div class="v">${nf(d.mins)}</div><div class="l">Mínútur</div><div class="tiny">${diff == null ? '' : `${diff >= 0 ? '+' : ''}${diff}% frá vikunni á undan`}</div></div>
+      ${d.km ? `<div class="glass"><div class="v">${nf(d.km, 1)}</div><div class="l">Kílómetrar</div></div>` : ''}
+      ${d.vol ? `<div class="glass"><div class="v">${d.vol >= 10000 ? nf(d.vol / 1000, 1) + ' t' : nf(d.vol) + ' kg'}</div><div class="l">Lyft samtals</div></div>` : ''}
+      <div class="glass"><div class="v">${streak}</div><div class="l">${streak === 1 ? 'Vika' : 'Vikur'} í röð</div><div class="tiny">með æfingu</div></div>
+      ${d.pbs ? `<div class="glass"><div class="v">${d.pbs}</div><div class="l">Met</div></div>` : ''}
+    </div>
+    ${d.types.length ? `<h2>Íþróttirnar</h2>${barsList(d.types)}` : ''}
+    <button class="cta" data-act="sharecard">Deila sem mynd</button>
+    <p class="tiny" style="text-align:center">Myndin passar fyrir Instagram Story og aðra miðla.</p>`);
+}
+const barsList = types => { const max = types[0][1]; return `<ul class="sumbars">${types.slice(0, 5).map(([k, n]) => `<li><span>${TYPES[k].name}</span><span class="mbar"><i style="width:${n / max * 100}%;background:${tc(k)}"></i></span><b>${n}</b></li>`).join('')}</ul>`; };
+function openYear(year){
+  const y = year || new Date().getFullYear(), d = periodData(`${y}-01-01`, `${y}-12-31`);
+  if (!d.n) return toast(`Engar æfingar skráðar ${y}`);
+  const months = Array(12).fill(0); d.ss.forEach(s => months[+s.date.slice(5, 7) - 1]++);
+  const bestM = months.indexOf(Math.max(...months));
+  const capM = MONFULL[bestM].charAt(0).toUpperCase() + MONFULL[bestM].slice(1);
+  ui.share = { kind: 'year', title: `Árið mitt ${y}`, sub: 'Æfingabókin', d, best: capM, streak: weekStreak() };
+  openSheet(`Árið þitt ${y}`, `<div class="kv">
+      <div class="glass"><div class="v">${d.n}</div><div class="l">Æfingar</div></div>
+      <div class="glass"><div class="v">${nf(d.mins / 60, 0)}</div><div class="l">Klukkustundir</div></div>
+      ${d.km ? `<div class="glass"><div class="v">${nf(d.km, 0)}</div><div class="l">Kílómetrar</div><div class="tiny">${d.km >= 1322 ? 'Lengra en hringvegurinn!' : `${Math.round(d.km / 1322 * 100)}% af hringveginum`}</div></div>` : ''}
+      ${d.vol ? `<div class="glass"><div class="v">${nf(d.vol / 1000, 0)} t</div><div class="l">Lyft samtals</div></div>` : ''}
+      <div class="glass"><div class="v">${capM}</div><div class="l">Besti mánuðurinn</div><div class="tiny">${months[bestM]} æfingar</div></div>
+      ${d.topPool ? `<div class="glass"><div class="v" style="font-size:18px">${esc(d.topPool[0])}</div><div class="l">Uppáhaldslaugin</div><div class="tiny">${d.topPool[1]} ferðir</div></div>` : ''}
+      ${d.elev ? `<div class="glass"><div class="v">${nf(d.elev)} m</div><div class="l">Hækkun</div><div class="tiny">${(d.elev / 2110).toFixed(1).replace('.', ',')} × Hvannadalshnúkur</div></div>` : ''}
+      ${d.pbs ? `<div class="glass"><div class="v">${d.pbs}</div><div class="l">Met slegin</div></div>` : ''}
+    </div>
+    <h2>Mánuðirnir</h2><div class="ymonths">${months.map((n, i) => `<span><i style="height:${Math.max(3, n / Math.max(1, ...months) * 60)}px"></i><small>${MON[i].slice(0, 3)}</small></span>`).join('')}</div>
+    <h2>Íþróttirnar</h2>${barsList(d.types)}
+    <button class="cta" data-act="sharecard">Deila sem mynd</button>`);
+}
+/* Mynd fyrir Instagram Story (1080 × 1920) teiknuð á canvas */
+async function shareCard(){
+  const S = ui.share; if (!S) return;
+  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
+  const g = c.getContext('2d'); if (!g) return toast('Vafrinn styður ekki myndir');
+  const css = n => (getComputedStyle(document.documentElement).getPropertyValue(n) || '').trim() || '#4CC3FF';
+  const bg = g.createLinearGradient(0, 0, 1080, 1920); bg.addColorStop(0, '#0B1F33'); bg.addColorStop(1, '#0E5C63'); g.fillStyle = bg; g.fillRect(0, 0, 1080, 1920);
+  const font = (w, s) => `${w} ${s}px "Plus Jakarta Sans", system-ui, sans-serif`;
+  g.fillStyle = '#9FC3DA'; g.font = font(700, 40); g.fillText('ÆFINGABÓKIN', 90, 170);
+  g.fillStyle = '#FFFFFF'; g.font = font(800, 96); g.fillText(S.title, 90, 300);
+  g.fillStyle = '#C9DCEA'; g.font = font(600, 44); g.fillText(S.sub, 90, 370);
+  const d = S.d, stats = [[String(d.n), 'æfingar'], [nf(S.kind === 'year' ? d.mins / 60 : d.mins, 0), S.kind === 'year' ? 'klukkustundir' : 'mínútur']];
+  if (d.km) stats.push([nf(d.km, S.kind === 'year' ? 0 : 1), 'kílómetrar']);
+  if (d.vol) stats.push([d.vol >= 10000 ? nf(d.vol / 1000, 1) + ' t' : nf(d.vol) + ' kg', 'lyft']);
+  if (S.streak) stats.push([String(S.streak), S.streak === 1 ? 'vika í röð' : 'vikur í röð']);
+  if (d.pbs) stats.push([String(d.pbs), 'met']);
+  stats.slice(0, 6).forEach((st, i) => { const x = 90 + (i % 2) * 470, y = 560 + Math.floor(i / 2) * 260;
+    g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.roundRect ? g.roundRect(x - 20, y - 150, 430, 220, 36) : g.rect(x - 20, y - 150, 430, 220); g.fill();
+    g.fillStyle = '#FFFFFF'; g.font = font(800, 110); g.fillText(st[0], x + 10, y - 10);
+    g.fillStyle = '#C9DCEA'; g.font = font(600, 40); g.fillText(st[1], x + 14, y + 44); });
+  let y = 1380; g.fillStyle = '#FFFFFF'; g.font = font(800, 48); g.fillText('Íþróttirnar', 90, y); y += 40;
+  const max = d.types.length ? d.types[0][1] : 1;
+  d.types.slice(0, 4).forEach(([k, n]) => { y += 80; g.fillStyle = '#E3EEF8'; g.font = font(700, 40); g.fillText(TYPES[k].name, 90, y);
+    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(470, y - 30, 440, 30); g.fillStyle = css(`--c-${k}`); g.fillRect(470, y - 30, 440 * n / max, 30);
+    g.fillStyle = '#FFFFFF'; g.fillText(String(n), 940, y); });
+  g.fillStyle = '#9FC3DA'; g.font = font(600, 36); g.fillText('aefingabokin.github.io', 90, 1840);
+  const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) return toast('Tókst ekki að búa til mynd');
+  const file = new File([blob], S.kind === 'year' ? 'arid-mitt.png' : 'vikan-min.png', { type: 'image/png' });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: S.title }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Mynd vistuð');
+}
+
+/* ================= Merki og áfangar ================= */
+const capitalPools = () => POOLS.filter(p => p[1] === 'Höfuðborgarsvæðið').map(p => p[0]);
+const BADGES = [
+  ['Æfingar', [['n1', '🏁', 'Fyrsta skrefið', 'Fyrsta æfingin', 'n', 1], ['n10', '🥉', 'Komin(n) af stað', '10 æfingar', 'n', 10], ['n50', '🥈', 'Í rútínu', '50 æfingar', 'n', 50],
+    ['n100', '🥇', 'Hundrað', '100 æfingar', 'n', 100], ['n250', '🏆', 'Járnvilji', '250 æfingar', 'n', 250], ['n500', '💎', 'Goðsögn', '500 æfingar', 'n', 500]]],
+  ['Vikur í röð', [['w4', '🔥', 'Mánuður', '4 vikur í röð með æfingu', 'streak', 4], ['w12', '🔥', 'Ársfjórðungur', '12 vikur í röð', 'streak', 12],
+    ['w26', '🔥', 'Hálft ár', '26 vikur í röð', 'streak', 26], ['w52', '👑', 'Heilt ár', '52 vikur í röð', 'streak', 52]]],
+  ['Vegalengd', [['k50', '👟', '50 km', 'Samtals 50 km', 'km', 50], ['k100', '👟', '100 km', 'Samtals 100 km', 'km', 100], ['k500', '🛣️', '500 km', 'Samtals 500 km', 'km', 500],
+    ['k1322', '🇮🇸', 'Hringvegurinn', '1.322 km, eins og hringinn í kringum landið', 'km', 1322]]],
+  ['Hækkun', [['e914', '⛰️', 'Esjan', '914 m samanlögð hækkun', 'elev', 914], ['e2110', '🏔️', 'Hvannadalshnúkur', '2.110 m samanlögð hækkun', 'elev', 2110],
+    ['e8849', '🏔️', 'Everest', '8.849 m samanlögð hækkun', 'elev', 8849]]],
+  ['Lyftingar', [['v10', '🏋️', '10 tonn', 'Samtals 10 tonn lyft', 'vol', 10000], ['v100', '🏋️', '100 tonn', 'Samtals 100 tonn lyft', 'vol', 100000],
+    ['v1000', '🦍', '1.000 tonn', 'Samtals 1.000 tonn lyft', 'vol', 1000000], ['pb10', '⚡', 'Metasafnari', '10 met eða PB', 'pbs', 10]]],
+  ['Sund og laugar', [['p5', '🏊', 'Laugaflakkari', '5 ólíkar laugar', 'pools', 5], ['p10', '🏊', 'Laugakóngur', '10 ólíkar laugar', 'pools', 10],
+    ['p25', '🌊', 'Laugaland', '25 ólíkar laugar', 'pools', 25], ['pcap', '🏙️', 'Allar á höfuðborgarsvæðinu', 'Allar laugar höfuðborgarsvæðisins', 'capPools', capitalPools().length],
+    ['spa25', '♨️', 'Pottormur', '25 ferðir í pott, gufu eða kalt', 'spa', 25]]],
+  ['Fjölbreytni', [['t3', '🎯', 'Fjölhæf(ur)', '3 ólíkar íþróttir', 'types', 3], ['t5', '🎯', 'Alhliða', '5 ólíkar íþróttir', 'types', 5], ['t8', '🌈', 'Allt í öllu', '8 ólíkar íþróttir', 'types', 8]]],
+  ['Sérstök', [['golf100', '⛳', 'Undir 100', '18 holur á færri en 100 höggum', 'golf100', 1], ['golfpar', '🦅', 'Á pari', 'Hringur á pari eða betur', 'golfpar', 1],
+    ['murph', '🎖️', 'Murph', 'Kláraðir Murph', 'murph', 1], ['g1', '🎯', 'Markmiði náð', 'Fyrsta markmiðinu náð', 'goals', 1], ['g5', '🏅', 'Markmiðaveiðari', '5 markmiðum náð', 'goals', 5]]]
+];
+/* Fer í gegnum æfingarnar í tímaröð og skráir hvenær hvert merki náðist */
+function badgeState(){
+  const ss = mySessions().slice().sort((a, b) => a.date.localeCompare(b.date) || (a.createdAt || '').localeCompare(b.createdAt || ''));
+  const cur = { n: 0, km: 0, elev: 0, vol: 0, pbs: 0, spa: 0, golf100: 0, golfpar: 0, murph: 0 }, pools = new Set(), types = new Set(), cap = new Set(capitalPools());
+  const got = {}, all = BADGES.flatMap(g => g[1]);
+  const check = date => all.forEach(([id, , , , k, th]) => { if (got[id]) return; const v = k === 'pools' ? pools.size : k === 'types' ? types.size : k === 'capPools' ? [...pools].filter(p => cap.has(p)).length : cur[k];
+    if (v != null && v >= th && k !== 'streak' && k !== 'goals') got[id] = date; });
+  ss.forEach(s => {
+    cur.n++; cur.km += kmOf(s); cur.elev += s.elevation || 0; cur.vol += sessionVolume(s); cur.pbs += (s.pb ? 1 : 0) + (s.prs || []).length;
+    if ((s.spa || []).length) cur.spa++; if (s.pool) pools.add(s.pool); types.add(s.type);
+    if (s.type === 'golf' && s.sub === 'h18' && s.score && s.score < 100) cur.golf100 = 1;
+    if (s.type === 'golf' && s.score && s.par && s.score <= s.par) cur.golfpar = 1;
+    if ((s.prs || []).some(p => p.key === 'murph') || /murph/i.test(s.wod || '')) cur.murph = 1;
+    check(s.date);
+  });
+  /* Vikur í röð: lengsta samfellda röð vikna með æfingu */
+  const weeks = [...new Set(ss.map(s => ymd(weekStart(parseYmd(s.date)))))].sort();
+  let run = 0, best = 0, prev = null;
+  weeks.forEach(w => { run = prev && ymd(addDays(parseYmd(prev), 7)) === w ? run + 1 : 1; prev = w; if (run > best) best = run;
+    BADGES[1][1].forEach(([id, , , , , th]) => { if (!got[id] && run >= th) got[id] = ymd(addDays(parseYmd(w), 6)); }); });
+  const achieved = myGoals.filter(g => g.status === 'achieved').sort((a, b) => (a.achievedAt || '').localeCompare(b.achievedAt || ''));
+  [['g1', 1], ['g5', 5]].forEach(([id, th]) => { if (achieved.length >= th) got[id] = achieved[th - 1].achievedAt || today(); });
+  const progress = { ...cur, pools: pools.size, types: types.size, capPools: [...pools].filter(p => cap.has(p)).length, streak: best, goals: achieved.length };
+  return { got, progress, total: all.length };
+}
+/* Eftir vistun: ný merki fá fagnaðarskjá. Í fyrsta sinn er bara skráð hvað er þegar náð. */
+function checkNewBadges(){
+  if (!me || state.active !== me.uid) return;
+  const key = 'aefingabokin.badges.' + me.uid, seen = (() => { try { return JSON.parse(LS.get(key) || 'null'); } catch(e){ return null; } })();
+  const { got } = badgeState(), ids = Object.keys(got);
+  LS.set(key, JSON.stringify(ids));
+  if (!seen) return;
+  const fresh = ids.filter(id => !seen.includes(id)); if (!fresh.length) return;
+  const b = BADGES.flatMap(g => g[1]).find(x => x[0] === fresh[0]);
+  setTimeout(() => celebrate(`${b[1]} Nýtt merki: ${b[2]}`, b[3] + (fresh.length > 1 ? `, og ${fresh.length - 1} ${fresh.length === 2 ? 'annað' : 'önnur'}` : '')), 900);
+  bump('totals', { badges: Object.fromEntries(fresh.map(id => [id, 1])) });
+}
+function renderBadges(){
+  const { got, progress, total } = badgeState(), n = Object.keys(got).length, y = new Date().getFullYear();
+  view.innerHTML = `<h1 style="margin-top:6px">Framfarir</h1>${progressSeg()}
+    <button class="glass yearcard" data-act="yearopen"><span class="sumic">${TROPHY}</span><span><b>Árið þitt ${y}</b><span class="tiny">Samantekt ársins sem þú getur deilt</span></span>${ICON.r}</button>
+    <div class="bhead"><b>${n} af ${total} merkjum</b><span class="mbar big"><i style="width:${n / total * 100}%"></i></span></div>
+    ${BADGES.map(([grp, list]) => `<h2>${grp}</h2><div class="bgrid">${list.map(([id, ic, name, desc, k, th]) => { const d = got[id], v = progress[k] || 0;
+      return `<div class="badge ${d ? 'got' : ''}"><span class="bic" aria-hidden="true">${ic}</span><b>${name}</b><span class="tiny">${desc}</span>
+        ${d ? `<span class="tiny bdate">${fmtDate(d)}</span>` : `<span class="mbar"><i style="width:${Math.min(100, v / th * 100)}%"></i></span><span class="tiny">${k === 'vol' ? nf(v / 1000, 1) + ' / ' + nf(th / 1000) + ' t' : k === 'km' || k === 'elev' ? nf(v) + ' / ' + nf(th) : `${Math.min(v, th)} / ${th}`}</span>`}</div>`; }).join('')}</div>`).join('')}
+    <h2>Laugaleikurinn</h2>${poolGame()}`;
+}
+
+/* ================= Laugaleikurinn ================= */
+const REGION_AREA = { 'Vestfirðir': 'vf', 'Norðurland vestra': 'nv', 'Norðurland eystra': 'ne', 'Vesturland': 'vl', 'Austurland': 'au', 'Höfuðborgarsvæðið': 'hb', 'Suðurland': 'sl', 'Suðurnes': 'sn' };
+function poolGame(){
+  const visited = new Set(mySessions().filter(s => s.pool).map(s => s.pool));
+  const total = POOLS.filter(p => visited.has(p[0])).length;
+  return `<p class="tiny" style="margin:0 2px 8px">Þú hefur farið í <b>${total} af ${POOLS.length}</b> sundlaugum og baðlónum landsins. Ýttu á landshluta til að sjá laugarnar.</p>
+    <div class="pmap">${Object.entries(REGION_AREA).map(([r, a]) => { const ps = POOLS.filter(p => p[1] === r), v = ps.filter(p => visited.has(p[0])).length, pct = Math.round(v / ps.length * 100);
+      return `<button class="preg ${v === ps.length ? 'full' : ''}" style="grid-area:${a};--p:${pct}%" data-act="poolregion" data-v="${esc(r)}"><b>${r}</b><span>${v} / ${ps.length}</span></button>`; }).join('')}</div>`;
+}
+function openPoolRegion(r){
+  const counts = {}; mySessions().filter(s => s.pool).forEach(s => counts[s.pool] = (counts[s.pool] || 0) + 1);
+  const ps = POOLS.filter(p => p[1] === r).sort((a, b) => (counts[b[0]] ? 1 : 0) - (counts[a[0]] ? 1 : 0) || poolColl.compare(a[0], b[0]));
+  openSheet(r, `<p class="tiny" style="margin-top:0">${ps.filter(p => counts[p[0]]).length} af ${ps.length} heimsóttar</p>
+    <ul class="pick">${ps.map(p => `<li><div class="prow ${counts[p[0]] ? 'got' : ''}"><span class="pck" aria-hidden="true">${counts[p[0]] ? '✓' : ''}</span><span><b>${esc(p[0])}</b></span>${counts[p[0]] ? `<span class="pcount">${counts[p[0]]} ${counts[p[0]] % 10 === 1 && counts[p[0]] % 100 !== 11 ? 'ferð' : 'ferðir'}</span>` : ''}</div></li>`).join('')}</ul>`);
+}
+
+/* ================= Fljótleg skráning: endurtaka og sniðmát ================= */
+const COPY_FIELDS = ['sub', 'title', 'pool', 'box', 'wod', 'course', 'par', 'intensity'];
+function quickItems(){
+  const seen = new Set(), rec = [];
+  mySessions().slice().sort(byDateDesc).forEach(s => { const k = [s.type, s.sub, s.title, s.pool, s.box].join('|'); if (seen.has(k) || rec.length >= 3) return; seen.add(k); rec.push(s); });
+  return rec;
+}
+function draftFrom(src){
+  startDraft(src.type);
+  COPY_FIELDS.forEach(f => { if (src[f] != null) draft[f] = src[f]; });
+  if (src.distance != null) draft.distRaw = fmtIn(src.distance);
+  if (src.durationMin != null) draft.durRaw = fmtDur(src.durationMin);
+  if ((src.spa || []).length) draft.spa = src.spa.map(x => ({ kind: x.kind, raw: String(Math.round(x.min)) }));
+  if ((src.exercises || []).length){
+    draft.exercises = src.exercises.map(e => { const ex = { exId: e.exId, name: e.name || exName(e.exId), sets: [] }; ex.cur = suggestion(ex); if (draft.type !== 'lift') ex.sets.push({ ...ex.cur }); return ex; });
+    draft.cur = 0;
+  }
+  saveDraft(); closeSheet(); ui.tab = 'log'; render(); window.scrollTo(0, 0);
+}
+function quickSection(){
+  const rec = quickItems(), tpl = settings.templates || [];
+  if (!rec.length && !tpl.length) return '';
+  const label = s => `${titleOf(s)}${s.pool ? `, ${s.pool}` : s.distance ? `, ${nf(s.distance, typeCfg(s.type, s.sub).unit === 'm' ? 0 : 1)} ${typeCfg(s.type, s.sub).unit}` : (s.exercises || []).length ? `, ${s.exercises.length} æfingar` : ''}`;
+  return `<div class="quick"><div class="qh"><b>Fljótleg skráning</b>${tpl.length ? `<button class="linkbtn" data-act="tplmanage">Sniðmátin mín</button>` : ''}</div>
+    <div class="qchips">${tpl.map(t => `<button class="chip qt" data-act="tpluse" data-id="${esc(t.id)}"><i style="background:${tc(TYPES[t.type] ? t.type : 'other')}"></i>${esc(t.name)}</button>`).join('')}
+      ${rec.map(s => `<button class="chip" data-act="repeat" data-id="${esc(s.id)}">${ICON.r}<span>Sama og síðast: ${esc(label(s))}</span></button>`).join('')}</div></div>`;
+}
+function openSaveTemplate(){
+  const def = draft.type === 'lift' && draft.plan ? draft.plan.name : titleOf(draft);
+  openSheet('Vista sem sniðmát', `<p class="muted" style="margin-top:0">Sniðmát birtist undir „Fljótleg skráning“ þegar þú skráir æfingu, t.d. „Fótadagur“ eða „Morgunsund“.</p>
+    <div class="ff"><label for="tplname">Heiti</label><input class="in" id="tplname" maxlength="40" value="${esc(def)}"></div>
+    <button class="cta" data-act="tplsave">Vista sniðmát</button>`);
+}
+function saveTemplate(){
+  const name = ($('#tplname').value || '').trim().slice(0, 40); if (!name) return toast('Gefðu sniðmátinu heiti');
+  const t = { id: uid(), name, type: draft.type };
+  COPY_FIELDS.forEach(f => { if (draft[f] != null && draft[f] !== '') t[f] = draft[f]; });
+  const dist = num(draft.distRaw), dur = parseDur(draft.durRaw); if (dist) t.distance = dist; if (dur) t.durationMin = dur;
+  if ((draft.spa || []).length) t.spa = draft.spa.map(x => ({ kind: x.kind, min: parseDur(x.raw) || num(x.raw) || 0 })).filter(x => x.min);
+  if ((draft.exercises || []).length) t.exercises = draft.exercises.map(e => ({ exId: e.exId, name: e.name || exName(e.exId) }));
+  setSetting('templates', [...(settings.templates || []), t].slice(-20)); closeSheet(); toast(`Sniðmátið „${name}“ vistað`);
+}
+function openTemplates(){
+  openSheet('Sniðmátin mín', `<ul class="pick">${(settings.templates || []).map(t => `<li><div class="prow"><span class="pck" style="background:${tc(TYPES[t.type] ? t.type : 'other')}"></span>
+    <span><b>${esc(t.name)}</b><span class="tiny">${TYPES[t.type] ? TYPES[t.type].name : ''}${(t.exercises || []).length ? `, ${t.exercises.length} æfingar` : ''}</span></span>
+    <button class="xbtn" data-act="tpldel" data-id="${esc(t.id)}" aria-label="Eyða ${esc(t.name)}">${ICON.x}</button></div></li>`).join('')}</ul>
+    <p class="tiny">Ný sniðmát býrð þú til með „Vista sem sniðmát“ neðst í skráningu.</p>`);
+}
+
+/* ================= Staðfesting netfangs ================= */
+function verifyBanner(){
+  if (!me || me.provider !== 'password' || me.emailVerified || ui.verifyHidden) return '';
+  return `<div class="glass vbanner" role="status">${MAIL}<span><b>Staðfestu netfangið þitt</b><span class="tiny">Við sendum hlekk á ${esc(me.email || 'netfangið þitt')}. Það tryggir að þú getir endurheimt aðganginn.</span>
+    <span class="vbtns"><button class="btn" data-act="verifycheck">Ég er búin(n) að staðfesta</button><button class="linkbtn" data-act="verifyresend">Senda aftur</button></span></span>
+    <button class="xbtn" data-act="verifyhide" aria-label="Fela">${ICON.x}</button></div>`;
 }
 
 /* ---------- Gröf ---------- */
@@ -2860,7 +3281,7 @@ $('#sheetClose').onclick = closeSheet; $('#sheetBg').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (document.getElementById('reactPop')) return closeReact(); closeSheet(); } });
 
 function openExPicker(){
-  openSheet('Veldu æfingu', `<input class="in" id="exq" placeholder="Leita eða skrifa nýja æfingu" autocomplete="off"><div id="exlist"></div>`);
+  openSheet('Veldu æfingu', `<input class="in" id="exq" placeholder="Leita á íslensku eða ensku, t.d. lat pulldown" autocomplete="off"><div id="exlist"></div>`);
   const q = $('#exq');
   const draw = () => {
     const term = q.value.trim().toLowerCase(), pid = draft ? draft.profileId : state.active;
@@ -2872,7 +3293,8 @@ function openExPicker(){
     const exact = allEx().some(e => e.name.toLowerCase() === term);
     $('#exlist').innerHTML = (term && !exact ? `<button class="btn primary block" style="margin-top:12px" data-newex="${esc(q.value.trim())}">Búa til „${esc(q.value.trim())}“</button>` : '') +
       Object.entries(groups).map(([g, list]) => `<div class="grp">${esc(g)}</div><ul class="pick">${list.map(e => { const lp = lastPerformance(e.id, draft && draft.id, pid);
-        return `<li><button data-pickex="${esc(e.id)}">${esc(e.name)}<span>${inSession.has(e.id) ? 'Í lotunni' : lp ? `Síðast ${setTxt(lp.sets[lp.sets.length - 1])}` : (e.custom ? 'Þín æfing' : '')}</span></button></li>`; }).join('')}</ul>`).join('');
+        const en = term && e.alias && !fold(e.name).includes(fold(term)) ? e.alias.split(' ').slice(0, 4).join(' ') : '';
+        return `<li><button data-pickex="${esc(e.id)}">${esc(e.name)}${en ? `<em class="exen">${esc(en)}</em>` : ''}<span>${inSession.has(e.id) ? 'Í lotunni' : lp ? `Síðast ${setTxt(lp.sets[lp.sets.length - 1])}` : (e.custom ? 'Þín æfing' : '')}</span></button></li>`; }).join('')}</ul>`).join('');
   };
   q.addEventListener('input', draw); draw();
 }
@@ -3177,6 +3599,26 @@ async function afterAuth(user){
 }
 
 /* ---------- Atburðir ---------- */
+/* Haldið inni á + og −: talan heldur áfram að breytast, fyrst hægt og svo hraðar */
+const HOLD_ACTS = new Set(['step', 'diststep', 'spastep']);
+let holdT = null, holdBtn = null, holdN = 0, holdFired = false;
+function holdStop(){ clearTimeout(holdT); holdT = null; holdBtn = null; }
+function holdTick(){
+  if (!holdBtn || !holdBtn.isConnected) return holdStop();
+  holdFired = true; holdN++; holdBtn.click();
+  if (holdN % 5 === 0 && navigator.vibrate) try { navigator.vibrate(8); } catch(e){}
+  holdT = setTimeout(holdTick, holdN < 6 ? 160 : holdN < 16 ? 90 : 45);
+}
+document.addEventListener('pointerdown', e => {
+  const b = e.target.closest('button[data-act]'); if (!b || !HOLD_ACTS.has(b.dataset.act) || (e.button && e.button !== 0)) return;
+  holdStop(); holdBtn = b; holdN = 0; holdFired = false; holdT = setTimeout(holdTick, 420);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => document.addEventListener(ev, e => { if (ev !== 'pointerleave' || e.target === holdBtn) holdStop(); }, true));
+window.addEventListener('blur', holdStop);
+document.addEventListener('visibilitychange', holdStop);
+document.addEventListener('contextmenu', e => { if (e.target.closest && e.target.closest('button[data-act]') && HOLD_ACTS.has(e.target.closest('button[data-act]').dataset.act)) e.preventDefault(); });
+/* Smellurinn sem kemur þegar fingri er sleppt eftir að hafa haldið inni telur ekki aukalega */
+document.addEventListener('click', e => { if (holdFired && e.isTrusted){ holdFired = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
 document.addEventListener('click', async e => {
   const b = e.target.closest('button, [data-act]');
   if (!b || !b.closest('#reactPop')) { if (document.getElementById('reactPop') && !(b && (b.dataset.kudos || b.dataset.gkudos))) closeReact(); }
@@ -3232,6 +3674,19 @@ document.addEventListener('click', async e => {
       break; }
     case 'invite': invite(); break;
     case 'sheetclose': closeSheet(); break;
+    case 'sumopen': openSummary(); break;
+    case 'yearopen': openYear(); break;
+    case 'sharecard': shareCard(); break;
+    case 'poolregion': openPoolRegion(d.v); break;
+    case 'repeat': { const src = state.sessions.find(x => x.id === d.id); if (src) draftFrom(src); break; }
+    case 'tpluse': { const t = (settings.templates || []).find(x => x.id === d.id); if (t) draftFrom(t); break; }
+    case 'tplopen': openSaveTemplate(); break;
+    case 'tplsave': saveTemplate(); break;
+    case 'tplmanage': openTemplates(); break;
+    case 'tpldel': setSetting('templates', (settings.templates || []).filter(x => x.id !== d.id)); openTemplates(); toast('Sniðmáti eytt'); break;
+    case 'verifyhide': ui.verifyHidden = true; render(); break;
+    case 'verifyresend': (Store.resendVerification ? Store.resendVerification() : Promise.resolve()).then(() => toast(`Póstur sendur á ${me.email}`)).catch(fail('Sending')); break;
+    case 'verifycheck': (Store.refreshUser ? Store.refreshUser() : Promise.resolve(true)).then(ok => { if (ok){ me.emailVerified = true; toast('Netfangið er staðfest. Takk!'); render(); } else toast('Ekki staðfest ennþá. Athugaðu líka ruslpóstinn.'); }).catch(fail('Athugun')); break;
     case 'planopen': openPlanSetup(); break;
     case 'planclose': ui.planPreview = null; render(); break;
     case 'plgroup': { const o = planSetup; if (o.combo){ o.combo = null; o.groups = []; } const i = o.groups.indexOf(d.v);
@@ -3343,12 +3798,19 @@ document.addEventListener('click', async e => {
     case 'wprev': ui.weekOffset--; render(); break;
     case 'wnext': if (ui.weekOffset < 0){ ui.weekOffset++; render(); } break;
     case 'pickex': openExPicker(); break;
-    case 'curex': draft.cur = +d.ei; draft.editSet = null; saveDraft(); render(); window.scrollTo(0, 0); break;
+    case 'curex': if (draft.dropOf != null) endDropSilently(); draft.cur = +d.ei; draft.editSet = null; saveDraft(); render(); window.scrollTo(0, 0); break;
+    case 'settype': draft.setType = d.v; saveDraft(); render(); break;
+    case 'dropend': endDrop(); break;
+    case 'ssopen': openSsPair(); break;
+    case 'sspick': ssPair(d.id); break;
+    case 'ssunpair': ssUnpair(); break;
     case 'step': step(d.k, +d.d); break;
     case 'doneset': doneSet(); break;
-    case 'editset': { const ex = curEx(), st = ex.sets[+d.si]; draft.editSet = +d.si; ex.cur = {kg: fmtIn(st.kg), reps: String(st.reps)}; saveDraft(); render(); window.scrollTo(0, 0); break; }
+    case 'donelast': doneLast(); break;
+    case 'editset': { if (draft.dropOf != null) endDropSilently(); const ex = curEx(), st = ex.sets[+d.si]; draft.editSet = +d.si; ex.cur = {kg: fmtIn(st.kg), reps: String(st.reps)}; saveDraft(); render(); window.scrollTo(0, 0); break; }
     case 'canceledit': { const ex = curEx(); draft.editSet = null; ex.cur = suggestion(ex); saveDraft(); render(); break; }
-    case 'rmset': { const ex = curEx(); ex.sets.splice(+d.si, 1); draft.editSet = null; ex.cur = suggestion(ex); saveDraft(); render(); break; }
+    case 'editdropstop': break;
+    case 'rmset': { const ex = curEx(); ex.sets.splice(+d.si, 1); draft.editSet = null; draft.dropOf = null; draft.setType = 'normal'; ex.cur = suggestion(ex); saveDraft(); render(); break; }
     case 'rmex': draft.exercises.splice(draft.cur, 1); draft.cur = Math.max(0, draft.cur - 1); draft.editSet = null; saveDraft(); render(); break;
     case 'settype': draft.type = d.t; if (!subsOf(d.t) || !(draft.sub in subsOf(d.t))) draft.sub = firstSub(d.t); saveDraft(); render(); break;
     case 'setsub': draft.sub = d.s || null; saveDraft(); render(); break;
@@ -3419,6 +3881,16 @@ window.addEventListener('resize', measureTabs);
 if (window.visualViewport) window.visualViewport.addEventListener('resize', measureTabs);
 if (window.ResizeObserver){ const ro = new ResizeObserver(measureTabs); const tb = document.querySelector('.tabs'); if (tb) ro.observe(tb); }
 setTimeout(measureTabs, 300);
+/* „Klára æfingu“: skráir settið ef tölur eru í reitunum, og fer svo í næstu æfingu (eða opnar val á næstu) */
+function doneLast(){
+  const ex = curEx(); if (!ex) return;
+  if (num(ex.cur.reps)){ const n = ex.sets.length; doneSet(); if (ex.sets.length === n) return; }
+  else if (!ex.sets.length) return toast('Skráðu að minnsta kosti eitt sett fyrst');
+  draft.editSet = null; if (draft.dropOf != null) endDropSilently();
+  const g = ssGroup(draft.exercises, draft.cur); if (g) draft.cur = g.idx[g.idx.length - 1];
+  if (draft.cur < draft.exercises.length - 1){ draft.cur++; saveDraft(); render(); window.scrollTo(0, 0); toast(`Næst: ${curEx().name || exName(curEx().exId)}`); }
+  else { saveDraft(); render(); openExPicker(); }
+}
 /* Netsamband: allt vistast í símanum og sendist þegar netið kemur */
 const netbar = document.createElement('div'); netbar.className = 'netbar'; netbar.setAttribute('role', 'status');
 netbar.innerHTML = `<span class="nd" aria-hidden="true"></span><span><b>Ekkert netsamband.</b> Það sem þú skráir vistast í símanum og sendist sjálfkrafa þegar netið kemur.</span>`;
@@ -3440,7 +3912,7 @@ document.addEventListener('submit', async e => {
   if (mode === 'signin' && !pw) { authErr = 'Sláðu inn lykilorð.'; return render(); }
   authBusy = true; render();
   try {
-    if (mode === 'signup') await Store.signUpEmail(pendingName, email, pw);
+    if (mode === 'signup'){ await Store.signUpEmail(pendingName, email, pw); setTimeout(() => toast(`Við sendum staðfestingarpóst á ${email}`), 1500); }
     else if (mode === 'signin') await Store.signInEmail(email, pw);
     else { await Store.resetPassword(email); authInfo = `Ef ${email} er skráð færðu póst með hlekk til að velja nýtt lykilorð. Athugaðu líka ruslpóstinn.`; }
   } catch(err){ authErr = authErrorText(err) || 'Það tókst ekki. Reyndu aftur.'; }
