@@ -1044,6 +1044,13 @@ button.wbtn.wc-dots, button.wbtn.wc-tiles, button.wbtn.wc-rings{border:0;padding
 
 .spaquick{margin-top:12px;padding:12px 14px;border-radius:18px;display:flex;flex-direction:column;gap:8px}
 .spaquick .opts{display:flex;flex-wrap:wrap;gap:6px}
+/* Upphitun og niðurlag á þrektæki í lyftingum */
+.sparows .cdx{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 0 10px}
+.sparows .cdx .unitwrap .in{min-height:40px;padding:6px 46px 6px 10px;font-weight:600}
+.cdquick .cdsame{align-self:flex-start;max-width:100%;white-space:normal;text-align:left}
+.cdquick .cdpre{align-self:flex-start;font-size:13px;min-height:32px;padding:2px 0}
+.cded .cdlong{padding:0 16px 8px}
+.cdfirst{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 10px}
 
 /* + og − má halda inni: ekkert val á texta eða valmynd við langa snertingu */
 button[data-act="step"], button[data-act="diststep"], button[data-act="spastep"]{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

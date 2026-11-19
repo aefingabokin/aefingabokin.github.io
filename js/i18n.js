@@ -1110,7 +1110,39 @@ export const I18N_EN = {
 "Notaður til að meta álag hlaupa út frá meðalpúls. Ef tómt er hann áætlaður út frá aldri, annars miðað við hraða.": "Used to estimate run effort from average heart rate. If empty, it is estimated from age, otherwise based on pace.",
 "Besti hraði": "Best pace",
 "Besti hraði, min / km": "Best pace, min / km",
-"Hvannadalshnúkur": "Hvannadalshnúkur"
+"Hvannadalshnúkur": "Hvannadalshnúkur",
+"Hallandi brjóstpressa í vél": "Incline chest press machine",
+"Niðurtog í vél": "Pulldown machine",
+"Róður fyrir efra bak í vél": "Upper back row machine",
+"Yfirtog í vél (pullover)": "Pullover machine",
+"Mjóbaksrétta í vél": "Lower back machine",
+"Fótakreppa standandi": "Standing leg curl",
+"Beltishnébeygja": "Belt squat",
+"Rassspyrna í vél": "Glute kickback machine",
+"Mjaðmalyfta í vél": "Hip thrust machine",
+"Mjaðmatæki (multi hip)": "Multi hip machine",
+"Hliðarlyftur í vél": "Lateral raise machine",
+"Tvíhöfðakrulla í vél": "Arm curl machine",
+"Þríhöfðarétta í vél": "Triceps extension machine",
+"Dýfur í vél": "Seated dip machine",
+"Dýfur með aðstoð": "Assisted dips",
+"Bolsnúningur í vél": "Rotary torso machine",
+"Þrekhjól": "Exercise bike",
+"Hlaupabretti": "Treadmill",
+"Stigavél": "Stair climber",
+"Skíðavél": "SkiErg",
+"Skíðagöngutæki": "Elliptical",
+"Annað tæki": "Other machine",
+"Niðurlag": "Cool-down",
+"Kaloríur": "Calories",
+"Hitaðirðu upp á þrektæki?": "Did you warm up on a cardio machine?",
+"Niðurlag á þrektæki eftir æfinguna?": "Cool-down on a cardio machine after the workout?",
+"Skrá upphitun líka": "Log a warm-up too",
+"Upphitun á þrektæki": "Cardio warm-up",
+"Niðurlag á þrektæki": "Cardio cool-down",
+"Telst með lyftingaæfingunni, ekki sem sér æfing": "Counts as part of the lifting workout, not as a separate workout",
+"Löng upphitun. Ef þetta var sér æfing er betra að skrá hana sér, þá birtist hún sem sér æfing í vikunni.": "Long warm-up. If this was a workout of its own, log it separately so it shows as its own workout in the week.",
+"Byrja á upphitun á þrektæki": "Start with a cardio warm-up"
 };
 export const I18N_PAT = [["^Sett (\\d+)$", "Set $1"], ["^Skrá sett (\\d+)$", "Log set $1"], ["^Sett (\\d+) skráð$", "Set $1 logged"], ["^Breyta setti (\\d+)$", "Edit set $1"], ["^Breyta upphitunarsetti$", "Edit warm-up set"], ["^Upphitunarsett$", "Warm-up set"], ["^Sett (\\d+) · drop (\\d+)$", "Set $1 · drop $2"], ["^Skrá drop (\\d+)$", "Log drop $1"], ["^Drop (\\d+) skráð$", "Drop $1 logged"], ["^Æfing (\\d+) af (\\d+)$", "Exercise $1 of $2"], ["^Súpersett ([A-H]) · umferð (\\d+)$", "Superset $1 · round $2"], ["^Súpersett ([A-H])$", "Superset $1"], ["^Skrá ([A-H]\\d)$", "Log $1"], ["^Næst: (.+)$", "Next: $1"], ["^Síðast (.+)$", "Last $1"], ["^(\\d+) æfingar hjá ykkur$", "$1 workouts for you two"], ["^(\\d+) æfing hjá ykkur$", "$1 workout for you two"], ["^(\\d+) æfingar$", "$1 workouts"], ["^(\\d+) æfing$", "$1 workout"], ["^(\\d+) sett$", "$1 sets"], ["^Sett (\\d+) af (\\d+)$", "Set $1 of $2"], ["^Öll (\\d+) sett búin$", "All $1 sets done"], ["^Fyrir (\\d+) dögum$", "$1 days ago"], ["^(\\d+) af (\\d+) merkjum$", "$1 of $2 badges"], ["^Árið þitt (\\d+)$", "Your year $1"], ["^Árið mitt (\\d+)$", "My year $1"], ["^Hvíld (.+)$", "Rest $1"], ["^af (\\d+(?:[,.]\\d+)?) (mín|sek)$", "of $1 $2"], ["^(\\d+(?:[,.]\\d+)?) mín$", "$1 min"], ["^(\\d+(?:[,.]\\d+)?) sek$", "$1 sec"], ["^~(\\d+) mín$", "~$1 min"], ["^(\\d+) æfingar · ~(\\d+) mín$", "$1 exercises · ~$2 min"], ["^Skráð á (.+)$", "Logged for $1"], ["^Ljúka setti$", "Finish set"], ["^(\\d+) (þyngdir|þyngd)$", "$1 weights"], ["^Sett (\\d+)(.*)$", "Set $1$2"], ["^(\\d+) × (\\d+)–(\\d+) endurtekningar$", "$1 × $2–$3 reps"], ["^(\\d+) × (\\d+)–(\\d+)$", "$1 × $2–$3"], ["^endurtekningar$", "reps"], ["^(\\d+) dagar? með hreyfingu$", "$1 active days"], ["^(\\d+)% frá vikunni á undan$", "$1% vs. the week before"], ["^\\+(\\d+)% frá vikunni á undan$", "+$1% vs. the week before"], ["^Sama og síðast: (.+)$", "Same as last time: $1"], ["^Endurtaka síðast: (.+)$", "Repeat last: $1"], ["^(\\d+) / (\\d+)$", "$1 / $2"], ["^Mín (\\d+)$", "Min $1"], ["^Í dag$", "Today"], ["^Fyrir (\\d+) d\\.$", "$1 d ago"], ["^Síðasta vika í hnotskurn$", "Last week in a nutshell"]].map(([p, r]) => [new RegExp(p), r]);
 
@@ -1118,6 +1150,8 @@ let i18nOn = false, i18nObs = null;
 const I18N_SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'CODE']);
 /* Setningar með nöfnum eða tölum inni í: þýddar með föllum */
 const I18N_FN = [
+  [/^(Upphitun|Niðurlag): (.+) (\d+(?:[,.:]\d+)*) mín$/, (m, a, b, c) => `${I18N_EN[a] || a}: ${I18N_EN[b] || b} ${c} min`],
+  [/^Sama og síðast: ((?:.+? \S+ mín)(?:, .+? \S+ mín)*)$/, (m, a) => `Same as last time: ${a.split(', ').map(p => p.replace(/^(.+) (\S+) mín$/, (q, n, v) => `${I18N_EN[n] || n} ${v} min`)).join(', ')}`],
   [/^(.+): (\d+) sett$/, (m, a, b) => `${I18N_EN[a] || a}: ${b} sets`],
   [/^\+ (.+)$/, (m, a) => `+ ${I18N_EN[a] || a}`],
   [/^Fjarlægja (.+) úr lotunni$/, (m, a) => `Remove ${I18N_EN[a] || a} from this session`],

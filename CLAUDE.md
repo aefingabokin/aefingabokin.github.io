@@ -28,13 +28,15 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px) og á hlið (≥1000 px, valmynd vinstra megin).
 
-## Staða (útgáfa 3.4, CACHE v58)
-Þessi pakki er útgáfa 3.4. Á GitHub (main) er útgáfa 3.3, nema að `sw.js` er þar enn með CACHE v43.
-Það sem 3.4 bætir við og á eftir að fara á GitHub:
-- Enska í Stillingum → Útlit → Tungumál / Language, og hnappur á innskráningarskjám (`js/i18n.js`, ný skrá).
-- Nýtt app-tákn: merkið „A+F (2)“ (vikusúlur sem rísa úr opinni bók) í `icons/` og `manifest.webmanifest`.
-- `sw.js` (CACHE v58, i18n.js í SHELL), `index.html`, `js/ui.js`, `js/settings.js`, `README.md`.
-Fyrsta verk: bera saman við GitHub, keyra prófanir, commit og push á `main`.
+## Staða (útgáfa 3.5, CACHE v59)
+Útgáfa 3.4 (enska, nýtt app-tákn) er á GitHub. 3.5 bætir við:
+- Upphitun og niðurlag á þrektæki inni í lyftingaæfingu (`s.cardio = [{ when: 'pre'|'post', machine, min, dist?, kcal? }]`,
+  `MACHINES` í `ui.js`). Telst ekki sem sér æfing og ekki í sett/magn/met. Næsta skref (bíður samþykkis): sér flokkur „Þrektæki“.
+- Talnareitir velja töluna þegar ýtt er á þá, svo ný tala skrifast beint yfir.
+- Tæki sem vantaði í æfingasafnið (Technogym o.fl.): rassspyrna og mjaðmalyfta í vél, multi hip, beltishnébeygja o.fl.
+  Ný heiti fá líka `EXMETA` í `coach.js` og enskt heiti í `i18n.js`.
+- Prófanir: `dev/build_demo.py` les CSS úr eldra sýnishorni sem er ekki lengur til. 32 af 35 prófunum standast;
+  `test-admin.js`, seinni hluti `test-fb.js` og `test-import.mjs` vantar prófunargögn (stjórnborðssýnishorn, `samples/`).
 
 Eldri hönnunarvinna (í claude.ai): sýnishorn appsins, merkjatillögur, vikurit-stefnur, tillögur að „Vöðvum vikunnar“,
 drop sett og súpersett, og sjö síðna kynningarbæklingur.

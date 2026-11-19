@@ -18,7 +18,7 @@ const DemoStore = (() => {
   db.sessions.H1 = {}; db.exercises.H1 = {};
   let n = 0; const sid = () => 'd' + (++n);
   const addS = s => { const id = sid(); db.sessions.H1[id] = { id, createdAt: iso(s.date), updatedAt: iso(s.date), notes: '', ...s }; return id; };
-  const lift = (pid, date, list, dur) => addS({ profileId: pid, type: 'lift', date, durationMin: dur,
+  const lift = (pid, date, list, dur, extra) => addS({ profileId: pid, type: 'lift', date, durationMin: dur, ...(extra || {}),
     exercises: list.map(([name, sets]) => ({ exId: idOf(name), name, sets: sets.map(([kg, reps]) => ({ kg, reps })) })) });
   const r25 = v => Math.round(v / 2.5) * 2.5;
   // Aron: 8 vikur, mán/mið/fös lyftingar, þri og lau hlaup, fim sund með pottum, sun ganga
@@ -27,8 +27,8 @@ const DemoStore = (() => {
     const skip = rnd() < 0.12;
     if (skip && back > 1) continue;
     const bench = r25(85 + prog * 10), squat = r25(90 + prog * 12.5), press = r25(45 + prog * 5);
-    if (wd === 0) lift(ME, date, [['Bekkpressa', [[bench, 8], [bench, 8], [bench + 2.5, 5]]], ['Niðurtog (pull down)', [[55, 12], [60, 10], [60, 9]]], ['Curl (tvíhöfði)', [[14, 12], [16, 9]]]], 58);
-    if (wd === 2) lift(ME, date, [['Hnébeygja', [[squat, 6], [squat, 6], [squat, 5]]], ['Fótapressa', [[160, 12], [180, 10]]], ['Axlapressa', [[press, 8], [press, 7]]]], 62);
+    if (wd === 0) lift(ME, date, [['Bekkpressa', [[bench, 8], [bench, 8], [bench + 2.5, 5]]], ['Niðurtog (pull down)', [[55, 12], [60, 10], [60, 9]]], ['Curl (tvíhöfði)', [[14, 12], [16, 9]]]], 58, { cardio: [{ when: 'pre', machine: 'bike', min: 10 }] });
+    if (wd === 2) lift(ME, date, [['Hnébeygja', [[squat, 6], [squat, 6], [squat, 5]]], ['Fótapressa', [[160, 12], [180, 10]]], ['Axlapressa', [[press, 8], [press, 7]]]], 62, back % 14 < 7 ? { cardio: [{ when: 'pre', machine: 'row', min: 5, dist: 1000 }, { when: 'post', machine: 'stairs', min: 10, kcal: 95 }] } : null);
     if (wd === 4 && rnd() < 0.7) lift(ME, date, [['Réttstöðulyfta', [[r25(120 + prog * 10), 5], [r25(120 + prog * 10), 5]]], ['Stangaróður', [[60, 10], [65, 8]]], ['Bekkpressa', [[bench - 10, 10], [bench - 10, 10]]]], 50);
     if (wd === 1){ const km = 5 + Math.round(rnd() * 10) / 10, tempo = back % 14 < 7; addS({ profileId: ME, type: 'run', date, distance: km, durationMin: km * (tempo ? 5.1 : 6.0 + rnd() * 0.2), avgHr: tempo ? 168 : 146 }); }
     if (wd === 5){ const km = 9 + Math.round(rnd() * 30) / 10; addS({ profileId: ME, type: 'run', date, distance: km, durationMin: km * (6.05 + rnd() * 0.2), avgHr: 148, notes: back < 10 ? 'Ægisíða og Nauthólsvík' : '' }); }

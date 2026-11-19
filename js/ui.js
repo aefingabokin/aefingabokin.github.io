@@ -164,7 +164,7 @@ function weekCell(list, isToday, who, day, pid){
 const weekStyleOf = () => ['dots', 'bars', 'tiles', 'rings'].includes(settings.weekStyle) ? settings.weekStyle : 'dots';
 const cellStyleOf = () => weekStyleOf() === 'bars' ? 'dots' : weekStyleOf();
 const sessSets = a => (a.exercises || []).reduce((n, e) => n + (e.sets || []).length, 0);
-const minsOf = a => a.durationMin || (a.type === 'lift' ? Math.min(90, 15 + sessSets(a) * 3) : kmOf(a) ? kmOf(a) * 6 : 30);
+const minsOf = a => a.durationMin || (a.type === 'lift' ? Math.min(90, 15 + sessSets(a) * 3) + cardioMin(a) : kmOf(a) ? kmOf(a) * 6 : 30);
 function weekCellBase(list, isToday, who, day){
   const st = cellStyleOf();
   const cls = `wc wc-${st}${isToday ? ' today' : ''}${list.length ? '' : ' none'}${list.length > 1 ? ' multi' : ''}`;
@@ -263,6 +263,23 @@ function spaTotals(list){
   return out;
 }
 const spaPills = totals => (totals && totals.length) ? `<div class="spa">${totals.map(t => `<span class="sp"><i style="background:${SPA[t.kind].color}"></i>${SPA[t.kind].short} ${spaTime(t.min)}${t.n > 1 ? ` <small>${t.n}×</small>` : ''}</span>`).join('')}</div>` : '';
+/* Þrektæki í lyftingaæfingu: upphitun á undan og niðurlag á eftir. Hluti af æfingunni, telst ekki sem sér æfing
+   og ekki í sett, magn eða met. Vistað sem s.cardio = [{ when: 'pre' | 'post', machine, min, dist?, kcal? }]. */
+const MACHINES = {
+  bike:   { name: 'Þrekhjól',       color: 'var(--c-bike)',  unit: 'km', def: '10' },
+  tread:  { name: 'Hlaupabretti',   color: 'var(--c-run)',   unit: 'km', def: '10' },
+  stairs: { name: 'Stigavél',       color: 'var(--c-hike)',  unit: null, def: '10' },
+  skierg: { name: 'Skíðavél',       color: 'var(--c-ski)',   unit: 'm',  def: '5' },
+  row:    { name: 'Róðravél',       color: 'var(--c-swim)',  unit: 'm',  def: '5' },
+  xtrain: { name: 'Skíðagöngutæki', color: 'var(--c-walk)',  unit: 'km', def: '10' },
+  other:  { name: 'Annað tæki',     color: 'var(--c-other)', unit: null, def: '10' }
+};
+const CARDIO_WHEN = { pre: 'Upphitun', post: 'Niðurlag' };
+const LONG_WARMUP = 20;   /* mín: lengri upphitun er líklega sér æfing */
+const cardioMin = s => ((s && s.cardio) || []).reduce((a, x) => a + (x.min || 0), 0);
+const cardioTxt = x => `${(MACHINES[x.machine] || MACHINES.other).name} ${spaTime(x.min)}`;
+const cardioPills = list => (list && list.length) ? `<div class="spa">${list.filter(x => MACHINES[x.machine] && x.min > 0).map(x => { const u = MACHINES[x.machine].unit;
+  return `<span class="sp"><i style="background:${MACHINES[x.machine].color}"></i>${CARDIO_WHEN[x.when] || CARDIO_WHEN.pre}: ${cardioTxt(x)}${x.dist && u ? ` <small>${nf(x.dist, u === 'm' ? 0 : 1)} ${u}</small>` : ''}${x.kcal ? ` <small>${nf(x.kcal)} kcal</small>` : ''}</span>`; }).join('')}</div>` : '';
 /* Álag hlaups */
 const EFFORT = { easy: {name: 'Rólegt', c: 'var(--c-walk)'}, mod: {name: 'Miðlungs', c: 'var(--c-bike)'}, hard: {name: 'Hratt', c: 'var(--c-run)'} };
 const effPill = lvl => EFFORT[lvl] ? `<span class="eff" style="--ec:${EFFORT[lvl].c}">${EFFORT[lvl].name}</span>` : '';
@@ -273,37 +290,45 @@ const LIB = [
   ['Brjóst', [
     'Bekkpressa|bench press', 'Hallandi bekkpressa|incline bench press', 'Handlóðapressa|dumbbell press db bench',
     'Brjóstpressa í vél|chest press machine', 'Flugur (fly)|fly flyes dumbbell fly', 'Hallandi handlóðapressa|incline dumbbell press db',
-    'Niðurhallandi bekkpressa|decline bench press', 'Kapalkross|cable crossover cable fly', 'Flugur í vél (pec deck)|pec deck machine fly',
-    'Armbeygjur|push up pushups', 'Breið brjóstpressa í vél|wide chest press machine wide grip chest press iso lateral']],
+    'Niðurhallandi bekkpressa|decline bench press', 'Kapalkross|cable crossover cable fly', 'Flugur í vél (pec deck)|pec deck machine fly pectoral',
+    'Armbeygjur|push up pushups', 'Breið brjóstpressa í vél|wide chest press machine wide grip chest press iso lateral',
+    'Hallandi brjóstpressa í vél|incline chest press machine']],
   ['Bak', [
     'Niðurtog (pull down)|lat pulldown', 'Kapalróður|seated cable row', 'Handlóðaróður|dumbbell row one arm row',
     'Upphífingar|pull up pullups', 'Réttstöðulyfta|deadlift', 'Bakfettur|back extension hyperextension',
-    'Stangaróður|barbell row bent over row', 'T-stangarróður|t-bar row', 'Róður í vél|machine row', 'Hökulyftur (chin-up)|chin up chinups',
-    'Upphífingar með aðstoð|assisted pull up', 'Niðurtog, mjótt grip|close grip pulldown', 'Beinarma niðurtog|straight arm pulldown',
-    'Axlayppingar (shrugs)|shrug shrugs']],
+    'Stangaróður|barbell row bent over row', 'T-stangarróður|t-bar row chest supported', 'Róður í vél|machine row low row seated row', 'Hökulyftur (chin-up)|chin up chinups',
+    'Upphífingar með aðstoð|assisted pull up easy chin dip', 'Niðurtog, mjótt grip|close grip pulldown', 'Beinarma niðurtog|straight arm pulldown',
+    'Axlayppingar (shrugs)|shrug shrugs', 'Niðurtog í vél|pulldown machine vertical traction iso lateral',
+    'Róður fyrir efra bak í vél|upper back row high row machine', 'Yfirtog í vél (pullover)|pullover machine',
+    'Mjóbaksrétta í vél|lower back machine back extension machine']],
   ['Fætur', [
-    'Fótapressa|leg press', 'Hnébeygja|squat back squat', 'Fótarétta|leg extension', 'Fótakreppa|leg curl lying leg curl',
+    'Fótapressa|leg press linear leg press 45', 'Hnébeygja|squat back squat', 'Fótarétta|leg extension', 'Fótakreppa|leg curl lying leg curl prone leg curl',
     'Framstig|lunge lunges walking lunge', 'Kálfalyfta|calf raise standing', 'Rúmensk réttstöðulyfta (RDL)|romanian deadlift rdl',
     'Hack squat|hack squat', 'Framhnébeygja|front squat', 'Bikarhnébeygja (goblet)|goblet squat', 'Búlgarskt framstig|bulgarian split squat',
     'Hnébeygja í Smith-vél|smith machine squat', 'Uppstig (step-up)|step up', 'Fótakreppa sitjandi|seated leg curl',
-    'Kálfalyfta sitjandi|seated calf raise', 'Súmó-réttstöðulyfta|sumo deadlift']],
+    'Kálfalyfta sitjandi|seated calf raise', 'Súmó-réttstöðulyfta|sumo deadlift', 'Fótakreppa standandi|standing leg curl',
+    'Beltishnébeygja|belt squat']],
   ['Rass og mjaðmir', [
-    'Mjaðmalyfta (hip thrust)|hip thrust', 'Mjaðmabrú (glute bridge)|glute bridge', 'Mjaðmaútfærsla í vél|hip abduction machine',
-    'Mjaðmaaðfærsla í vél|hip adduction machine', 'Rassspyrna í kapli|cable kickback glute kickback']],
+    'Mjaðmalyfta (hip thrust)|hip thrust', 'Mjaðmabrú (glute bridge)|glute bridge', 'Mjaðmaútfærsla í vél|hip abduction machine abductor standing abductor',
+    'Mjaðmaaðfærsla í vél|hip adduction machine adductor', 'Rassspyrna í kapli|cable kickback glute kickback',
+    'Rassspyrna í vél|glute machine glute kickback machine rear kick glute press', 'Mjaðmalyfta í vél|hip thrust machine glute drive',
+    'Mjaðmatæki (multi hip)|multi hip machine']],
   ['Axlir', [
     'Axlapressa|overhead press ohp shoulder press military press', 'Hliðarlyftur|lateral raise side raise', 'Face pull|face pull',
     'Axlarpressa í vél|shoulder press machine', 'Handlóðaaxlapressa|dumbbell shoulder press', 'Arnold-pressa|arnold press',
-    'Framlyftur|front raise', 'Afturaxlaflugur|rear delt fly reverse fly', 'Uppréttur róður|upright row', 'Hliðarlyftur í kapli|cable lateral raise']],
+    'Framlyftur|front raise', 'Afturaxlaflugur|rear delt fly reverse fly machine', 'Uppréttur róður|upright row', 'Hliðarlyftur í kapli|cable lateral raise',
+    'Hliðarlyftur í vél|lateral raise machine delts machine']],
   ['Hendur', [
     'Curl (tvíhöfði)|bicep curl dumbbell curl', 'Hammer curl|hammer curl', 'Þríhöfðapressa (pushdown)|triceps pushdown',
     'Dýfur|dips', 'Franskar pressur|skull crusher lying triceps extension', 'Stangarkrulla|barbell curl ez bar curl',
     'Preacher curl|preacher curl', 'Kapalkrulla|cable curl', 'Einbeitingarkrulla|concentration curl',
     'Þríhöfðalenging yfir höfuð|overhead triceps extension', 'Bekkpressa, mjótt grip|close grip bench press',
-    'Þríhöfðaspyrna (kickback)|triceps kickback', 'Úlnliðskreppur|wrist curl forearm']],
+    'Þríhöfðaspyrna (kickback)|triceps kickback', 'Úlnliðskreppur|wrist curl forearm', 'Tvíhöfðakrulla í vél|arm curl machine biceps machine',
+    'Þríhöfðarétta í vél|arm extension machine triceps machine', 'Dýfur í vél|seated dip machine', 'Dýfur með aðstoð|assisted dip easy chin dip']],
   ['Kviður', [
     'Kviðkreppur|crunch crunches sit up', 'Fótalyftur|leg raise', 'Kapalkreppur|cable crunch', 'Rússneskur snúningur|russian twist',
-    'Kviðhjól|ab wheel rollout', 'Hangandi fótalyftur|hanging leg raise', 'Kviðkreppur í vél|ab crunch machine',
-    'Hliðarbeygjur|side bend oblique', 'Pallof-pressa|pallof press']],
+    'Kviðhjól|ab wheel rollout', 'Hangandi fótalyftur|hanging leg raise', 'Kviðkreppur í vél|ab crunch machine abdominal crunch total abdominal',
+    'Hliðarbeygjur|side bend oblique', 'Pallof-pressa|pallof press', 'Bolsnúningur í vél|rotary torso machine oblique twist']],
   ['Alhliða', [
     'Ketilbjöllusveifla|kettlebell swing kb', 'Frívending (power clean)|power clean', 'Thruster|thruster', 'Burpees|burpee burpees',
     'Snörun (snatch)|snatch power snatch squat snatch', 'Jafnhending (clean & jerk)|clean and jerk c&j', 'Clean|squat clean hang clean', 'Push press|push press',
@@ -647,7 +672,7 @@ function kudosCard(){
 function itemHtml(s){
   const m = summary(s);
   return `<li><button class="item" data-edit="${esc(s.id)}"><span class="bar" style="background:${tc(TYPES[s.type] ? s.type : 'other')}"></span>
-    <span><div class="t">${esc(m.title)}${effPill(effortOf(s))}${pbPill(s)}</div><div class="s">${esc(m.sub)}</div>${spaPills(spaTotals(s.spa))}${m.extra ? `<div class="tiny">${esc(m.extra)}</div>` : ''}</span>
+    <span><div class="t">${esc(m.title)}${effPill(effortOf(s))}${pbPill(s)}</div><div class="s">${esc(m.sub)}</div>${cardioPills(s.cardio)}${spaPills(spaTotals(s.spa))}${m.extra ? `<div class="tiny">${esc(m.extra)}</div>` : ''}</span>
     <span class="d"><span class="edhint" aria-hidden="true">${PENCIL}</span>${fmtDate(s.date)}${ui.histBoth && ui.tab === 'history' ? `<br>${esc(pname(s.profileId))}` : ''}${(() => { const b = kudosBadge(kudosOf(s.profileId, s.id)); return b ? `<br>${b}` : ''; })()}</span></button></li>`;
 }
 
@@ -683,7 +708,7 @@ function renderLift(){
   const ex = exs[draft.cur];
   let body;
   if (!ex){
-    body = `<div class="glass" style="padding:22px;text-align:center;margin-top:12px"><b>Veldu fyrstu æfinguna</b><p class="muted" style="margin:6px 0 14px">Þú sérð hvað þú tókst síðast í hverju setti.</p>
+    body = `${cardioEditor('pre')}<div class="glass" style="padding:22px;text-align:center;margin-top:12px"><b>Veldu fyrstu æfinguna</b><p class="muted" style="margin:6px 0 14px">Þú sérð hvað þú tókst síðast í hverju setti.</p>
       <button class="btn primary" data-act="pickex">Velja æfingu</button></div>
       ${draft.profileId === me.uid ? `<button class="plancard glass" style="margin-top:12px" data-act="planopen"><span class="pic">${sportIcon('lift', 22)}</span>
         <span><b>Eða láttu appið setja upp æfinguna</b><span class="tiny">Veldu vöðvaflokk og markmið: styrkur, pump eða þol</span></span>${ICON.r}</button>` : ''}`;
@@ -760,6 +785,7 @@ function renderLift(){
       <button class="chip" data-act="pickex">+ Æfing</button>
     </div>
     ${body}
+    ${ex ? `${draft.cdPre || (draft.cardio || []).some(x => x.when === 'pre') ? cardioEditor('pre') : ''}${cardioEditor('post')}` : ''}
     <label class="f" for="notes">Athugasemd</label>
     <textarea class="in" id="notes" data-field="notes" placeholder="Hvernig gekk?">${esc(draft.notes ?? '')}</textarea>
     <div class="grid2">
@@ -861,6 +887,45 @@ function spaEditor(){
   </section>`;
 }
 const spaParsed = () => (draft.spa || []).map(x => ({ kind: x.kind, min: parseDur(x.raw) })).filter(x => x.min > 0);
+/* Upphitun og niðurlag á þrektæki (aðeins í lyftingum). Samanbrotið: flýtihnappar og „Sama og síðast“, svo einn smellur dugi. */
+const minRaw = m => Math.abs(m - Math.round(m)) > 0.01 ? fmtDur(m) : String(Math.round(m));
+function lastCardio(when){
+  const s = mySessions(draft.profileId).filter(x => x.type === 'lift' && x.id !== draft.id && (x.cardio || []).some(c => c.when === when)).sort(byDateDesc)[0];
+  return s ? s.cardio.filter(c => c.when === when && MACHINES[c.machine]) : null;
+}
+const cardioDraftOf = (x, at) => ({ when: x.when === 'post' ? 'post' : 'pre', machine: x.machine, raw: minRaw(x.min), distRaw: x.dist != null ? fmtIn(x.dist) : '', kcalRaw: x.kcal != null ? String(x.kcal) : '', at: at ?? null });
+const preCardioMin = () => (draft.cardio || []).filter(x => x.when === 'pre').reduce((a, x) => a + (parseDur(x.raw) || 0), 0);
+function cardioEditor(when){
+  const rows = (draft.cardio || []).map((x, i) => ({ x, i })).filter(r => r.x.when === when);
+  const add = Object.entries(MACHINES).map(([k, v]) => `<button class="chip spachip" data-act="cdadd" data-w="${when}" data-k="${k}"><i style="background:${v.color}"></i>+ ${v.name}</button>`).join('');
+  if (!rows.length){
+    const last = lastCardio(when), askPre = when === 'post' && !draft.cdPre;
+    return `<section class="glass spaquick cdquick"><div class="tiny">${when === 'pre' ? 'Hitaðirðu upp á þrektæki?' : 'Niðurlag á þrektæki eftir æfinguna?'}</div>
+      ${last ? `<button class="chip cdsame" data-act="cdsame" data-w="${when}">Sama og síðast: ${esc(last.map(cardioTxt).join(', '))}</button>` : ''}
+      <div class="opts">${add}</div>
+      ${askPre ? `<button class="linkbtn cdpre" data-act="cdpreopen">Skrá upphitun líka</button>` : ''}</section>`;
+  }
+  return `<section class="glass spaed cded">
+    <div class="slabel" style="padding:14px 16px 4px">${when === 'pre' ? 'Upphitun á þrektæki' : 'Niðurlag á þrektæki'}<div class="tiny">Telst með lyftingaæfingunni, ekki sem sér æfing</div></div>
+    <ul class="sparows">${rows.map(({ x, i }) => { const M = MACHINES[x.machine] || MACHINES.other; return `<li>
+      <span class="spn"><i style="background:${M.color}"></i>${M.name}</span>
+      <button class="mv" data-act="cdstep" data-i="${i}" data-d="-1" aria-label="Mínútu styttra">−</button>
+      <span class="unitwrap"><input class="in" data-cd="${i}" inputmode="decimal" value="${esc(x.raw)}" aria-label="Mínútur"><span class="unit">mín</span></span>
+      <button class="mv" data-act="cdstep" data-i="${i}" data-d="1" aria-label="Mínútu lengra">+</button>
+      <button class="xbtn" data-act="cdrm" data-i="${i}" aria-label="Fjarlægja">${ICON.x}</button>
+      <div class="cdx">${M.unit ? `<span class="unitwrap"><input class="in" data-cdd="${i}" inputmode="decimal" placeholder="Vegalengd" value="${esc(x.distRaw || '')}" aria-label="Vegalengd"><span class="unit">${M.unit}</span></span>` : '<span></span>'}
+        <span class="unitwrap"><input class="in" data-cdc="${i}" inputmode="numeric" placeholder="Kaloríur" value="${esc(x.kcalRaw || '')}" aria-label="Kaloríur"><span class="unit">kcal</span></span></div></li>`; }).join('')}</ul>
+    ${when === 'pre' ? `<div class="tiny cdlong" id="cdlong"${preCardioMin() > LONG_WARMUP ? '' : ' hidden'}>Löng upphitun. Ef þetta var sér æfing er betra að skrá hana sér, þá birtist hún sem sér æfing í vikunni.</div>` : ''}
+    <div class="opts" style="padding:4px 16px 14px">${add}</div>
+  </section>`;
+}
+function cardioLongUpdate(){ const el = $('#cdlong'); if (el && draft) el.hidden = !(preCardioMin() > LONG_WARMUP); }
+const cardioParsed = () => (draft.cardio || []).map(x => {
+  const min = parseDur(x.raw), M = MACHINES[x.machine]; if (!(min > 0) || !M) return null;
+  const o = { when: x.when === 'post' ? 'post' : 'pre', machine: x.machine, min };
+  const dist = num(x.distRaw), kcal = num(x.kcalRaw);
+  if (M.unit && dist > 0) o.dist = dist; if (kcal > 0) o.kcal = Math.round(kcal);
+  return o; }).filter(Boolean);
 function spaTotalText(){
   const t = spaTotals(spaParsed()); if (!t.length) return '';
   const heat = t.filter(x => HEAT.includes(x.kind)).reduce((a, x) => a + x.min, 0);
@@ -894,7 +959,8 @@ function startDraft(type, existing){
     draft.durRaw = existing.durationMin != null ? fmtDur(existing.durationMin) : '';
     draft.hrRaw = existing.avgHr ? String(existing.avgHr) : ''; draft.effort = existing.effort || '';
     draft.spa = (existing.spa || []).map(x => ({ kind: x.kind, raw: Math.abs(x.min - Math.round(x.min)) > 0.01 ? fmtDur(x.min) : String(Math.round(x.min)) }));
-    if (draft.type === 'lift'){ draft.cur = 0; draft.exercises = draft.exercises || []; draft.exercises.forEach(e => e.cur = null); }
+    if (draft.type === 'lift'){ draft.cur = 0; draft.exercises = draft.exercises || []; draft.exercises.forEach(e => e.cur = null);
+      draft.cardio = (existing.cardio || []).filter(x => MACHINES[x.machine]).map(x => cardioDraftOf(x)); }
     else { draft.exercises = (draft.exercises || []).map(e => ({ ...e, sets: e.sets.map(st => ({ kg: fmtIn(st.kg), reps: String(st.reps ?? '') })) })); if (draft.resTime) draft.resTime = fmtDur(draft.resTime); }
   } else {
     draft = {id: uid(), profileId: state.active, type, sub: firstSub(type), date: ui.presetDate || today(), notes: '', distRaw: '', durRaw: '', exercises: []}; ui.presetDate = null;
@@ -914,7 +980,11 @@ function saveLog(){
     s.plan = d.plan || null;
     if (!s.exercises.length) return toast('Kláraðu að minnsta kosti eitt sett');
     s.spa = spaParsed(); if (!s.spa.length) s.spa = null;
-    if (s.durationMin == null && d.startedAt){ const m = (Date.now() - d.startedAt) / 60000; if (m < 300) s.durationMin = Math.round(m); }
+    s.cardio = cardioParsed(); if (!s.cardio.length) s.cardio = null;
+    if (s.durationMin == null && d.startedAt){ const m = (Date.now() - d.startedAt) / 60000;
+      /* Upphitun sem var skráð eftir á (byrjaði áður en klukkan fór í gang) bætist við tímann */
+      const before = (d.cardio || []).filter(x => x.when === 'pre' && x.at != null).reduce((a, x) => a + Math.max(0, (parseDur(x.raw) || 0) - x.at), 0);
+      if (m < 300) s.durationMin = Math.round(m + before); }
   } else {
     const cfg = typeCfg(d.type, d.sub), has = k => cfg.fields.includes(k);
     s.sub = d.sub || null;
@@ -1361,6 +1431,7 @@ function sharedOf(s, vis){
     exerciseCount: (s.exercises || []).length, setCount: setCount(s), effort: effortOf(s), spa: spaTotals(s.spa),
     volume: full && s.type === 'lift' ? sessionVolume(s) : null,
     detail: full ? { exercises: s.exercises || null, notes: s.notes || '', wodDesc: s.wodDesc || null } : null };
+  if ((s.cardio || []).length) d.cardio = s.cardio;   /* aðeins ef til, svo undirskrift eldri æfinga breytist ekki */
   d.sig = hashStr(JSON.stringify(d));
   return d;
 }
@@ -1489,7 +1560,7 @@ function friendsWeek(){
           ${kudosBtn('data-gkudos', a.ownerId, a.g.id, k)}</li>`; }
       const n = Object.keys(a.kudos).length, mine = !!a.kudos[me.uid];
       return `<li><button class="item" data-fdetail="${esc(a.ownerId)}|${esc(a.id)}"><span class="feedav">${avatar(a.ownerId, 38)}<i style="background:${tc(TYPES[a.type] ? a.type : 'other')}"></i></span>
-        <span style="min-width:0"><div class="t">${esc(nameOf(a.ownerId))}: ${esc(actTitle(a))}${effPill(a.effort)}${pbPill(a)}</div><div class="s">${esc(actSummary(a))}</div>${spaPills(a.spa)}<div class="tiny">${fmtDate(a.date)}</div></span></button>
+        <span style="min-width:0"><div class="t">${esc(nameOf(a.ownerId))}: ${esc(actTitle(a))}${effPill(a.effort)}${pbPill(a)}</div><div class="s">${esc(actSummary(a))}</div>${cardioPills(a.cardio)}${spaPills(a.spa)}<div class="tiny">${fmtDate(a.date)}</div></span></button>
         <button class="cbtn" data-fdetail="${esc(a.ownerId)}|${esc(a.id)}" aria-label="Athugasemdir"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.5-4.8A8 8 0 1 1 21 12z"/></svg></button>
         ${kudosBtn('data-kudos', a.ownerId, a.id, a.kudos)}</li>`; }).join('')}</ul>`
       : `<div class="glass empty">Ekkert skráð hjá vinum síðustu tvær vikur.</div>`}`;
@@ -3296,7 +3367,8 @@ $('#sheetClose').onclick = closeSheet; $('#sheetBg').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (document.getElementById('reactPop')) return closeReact(); closeSheet(); } });
 
 function openExPicker(){
-  openSheet('Veldu æfingu', `<input class="in" id="exq" placeholder="Leita á íslensku eða ensku, t.d. lat pulldown" autocomplete="off"><div id="exlist"></div>`);
+  const warmFirst = draft && draft.type === 'lift' && !(draft.exercises || []).length && !(draft.cardio || []).some(x => x.when === 'pre');
+  openSheet('Veldu æfingu', `${warmFirst ? `<button class="btn ghost block cdfirst" data-act="cdfirst">${sportIcon('bike', 18)}<span>Byrja á upphitun á þrektæki</span></button>` : ''}<input class="in" id="exq" placeholder="Leita á íslensku eða ensku, t.d. lat pulldown" autocomplete="off"><div id="exlist"></div>`);
   const q = $('#exq');
   const draw = () => {
     const term = q.value.trim().toLowerCase(), pid = draft ? draft.profileId : state.active;
@@ -3616,7 +3688,7 @@ async function afterAuth(user){
 
 /* ---------- Atburðir ---------- */
 /* Haldið inni á + og −: talan heldur áfram að breytast, fyrst hægt og svo hraðar */
-const HOLD_ACTS = new Set(['step', 'diststep', 'spastep']);
+const HOLD_ACTS = new Set(['step', 'diststep', 'spastep', 'cdstep']);
 let holdT = null, holdBtn = null, holdN = 0, holdFired = false;
 function holdStop(){ clearTimeout(holdT); holdT = null; holdBtn = null; }
 function holdTick(){
@@ -3856,6 +3928,20 @@ document.addEventListener('click', async e => {
     case 'spastep': { const x = draft.spa[+d.i], v = parseDur(x.raw) || 0, step = v < 5 ? 0.5 : 1;
       const nv = Math.max(0, Math.round((v + (+d.d) * step) * 2) / 2); x.raw = Math.abs(nv - Math.round(nv)) > 0.01 ? fmtDur(nv) : String(nv);
       const inp = view.querySelector(`[data-spa="${d.i}"]`); if (inp) inp.value = x.raw; saveDraft(); updatePace(); break; }
+    case 'cdadd': { if (!MACHINES[d.k]) break; draft.cardio = draft.cardio || []; const w = d.w === 'post' ? 'post' : 'pre';
+      const prev = [...draft.cardio].reverse().find(x => x.machine === d.k), old = (lastCardio(w) || []).find(x => x.machine === d.k);
+      draft.cardio.push({ when: w, machine: d.k, raw: prev ? prev.raw : old ? minRaw(old.min) : MACHINES[d.k].def, distRaw: '', kcalRaw: '', at: draft.startedAt ? (Date.now() - draft.startedAt) / 60000 : null });
+      if (w === 'pre') draft.cdPre = true; saveDraft(); render();
+      const ins = view.querySelectorAll('[data-cd]'), j = draft.cardio.length - 1, inp = view.querySelector(`[data-cd="${j}"]`) || ins[ins.length - 1]; if (inp) inp.scrollIntoView({ block: 'center' }); break; }
+    case 'cdsame': { const w = d.w === 'post' ? 'post' : 'pre', at = draft.startedAt ? (Date.now() - draft.startedAt) / 60000 : null;
+      draft.cardio = (draft.cardio || []).concat((lastCardio(w) || []).map(x => cardioDraftOf(x, at)));
+      if (w === 'pre') draft.cdPre = true; saveDraft(); render(); break; }
+    case 'cdrm': draft.cardio.splice(+d.i, 1); saveDraft(); render(); break;
+    case 'cdstep': { const x = draft.cardio[+d.i]; if (!x) break; const v = parseDur(x.raw) || 0;
+      x.raw = String(Math.max(0, Math.round(v) + (+d.d)));
+      const inp = view.querySelector(`[data-cd="${d.i}"]`); if (inp) inp.value = x.raw; saveDraft(); cardioLongUpdate(); break; }
+    case 'cdpreopen': draft.cdPre = true; saveDraft(); render(); break;
+    case 'cdfirst': closeSheet(); if (draft){ draft.cdPre = true; saveDraft(); } render(); window.scrollTo(0, 0); break;
     case 'seteffort': draft.effort = d.e || ''; saveDraft(); updatePace(); break;
     case 'cancel': {
       const hasData = isNewDraft() && ((draft.exercises || []).some(x => x.sets.length) || draft.distRaw || draft.durRaw || draft.notes);
@@ -3935,6 +4021,16 @@ document.addEventListener('submit', async e => {
   } catch(err){ authErr = authErrorText(err) || 'Það tókst ekki. Reyndu aftur.'; }
   authBusy = false; if (gate === 'login') render();
 });
+/* Talnareitir (þyngd, endurtekningar, tími o.fl.): talan er valin þegar ýtt er á reitinn, svo ný tala skrifast beint yfir hana.
+   Safari og sumir Android-vafrar afvelja aftur við mouseup rétt eftir focus, því er það stöðvað í stutta stund. */
+const isNumIn = t => t && t.tagName === 'INPUT' && /^(decimal|numeric)$/.test(t.getAttribute('inputmode') || '');
+let numFocusAt = 0;
+document.addEventListener('focusin', e => {
+  const t = e.target; if (!isNumIn(t) || !t.value) return;
+  numFocusAt = Date.now(); try { t.select(); } catch(_){}
+  setTimeout(() => { if (document.activeElement === t) try { t.setSelectionRange(0, t.value.length); } catch(_){ try { t.select(); } catch(__){} } }, 0);
+});
+document.addEventListener('mouseup', e => { if (isNumIn(e.target) && Date.now() - numFocusAt < 400) e.preventDefault(); });
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'cmtext'){ updateCount(); return; }
@@ -3942,6 +4038,9 @@ document.addEventListener('input', e => {
   if (t.dataset.cur){ const ex = curEx(); if (ex){ ex.cur[t.dataset.cur] = t.value; saveDraft(); } return; }
   if (t.dataset.sei != null){ const ex = (draft.exercises || [])[+t.dataset.sei]; if (ex && ex.sets[+t.dataset.ssi]){ ex.sets[+t.dataset.ssi][t.dataset.sk] = t.value; saveDraft(); } return; }
   if (t.dataset.spa != null){ const x = (draft.spa || [])[+t.dataset.spa]; if (x){ x.raw = t.value; saveDraft(); updatePace(); } return; }
+  if (t.dataset.cd != null){ const x = (draft.cardio || [])[+t.dataset.cd]; if (x){ x.raw = t.value; saveDraft(); cardioLongUpdate(); } return; }
+  if (t.dataset.cdd != null){ const x = (draft.cardio || [])[+t.dataset.cdd]; if (x){ x.distRaw = t.value; saveDraft(); } return; }
+  if (t.dataset.cdc != null){ const x = (draft.cardio || [])[+t.dataset.cdc]; if (x){ x.kcalRaw = t.value; saveDraft(); } return; }
   const f = t.dataset.field; if (!f) return;
   if (f === 'distance'){ draft.distRaw = t.value; document.querySelectorAll('[data-act="distpre"]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.v === num(t.value)))); } else if (f === 'dur') draft.durRaw = t.value; else if (f === 'hr') draft.hrRaw = t.value; else draft[f] = t.value;
   if (f === 'course' && draft.type === 'golf' && !num(draft.par)){
