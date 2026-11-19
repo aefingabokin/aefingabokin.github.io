@@ -14,6 +14,7 @@ export const DEFAULTS = {
   palette: 'glacier',   // sjá PALETTES
   textSize: 'normal',   // normal | large
   glass: 'on',          // on | off
+  lang: 'is',           // tungumál viðmóts: is | en
   weekStyle: 'dots',    // útlit vikurits: dots (punktar) | bars (súlurit) | tiles (flísar) | rings (hringir)
   sportPalette: 'classic', // litir íþrótta: classic | hraun | orka | nordurljos | solarlag | jokull
   homeCards: ['week', 'summary', 'goals', 'stats', 'muscles', 'kudos', 'recent', 'prs'],
@@ -57,6 +58,7 @@ export const OPTIONAL_TABS = [
 
 export const SCHEMA = {
   appearance: [
+    { key: 'lang', label: 'Tungumál / Language', type: 'choice', options: [['is', 'Íslenska'], ['en', 'English']] },
     { key: 'theme', label: 'Ljóst eða dökkt', type: 'choice', options: [['system', 'Eins og síminn'], ['light', 'Ljóst'], ['dark', 'Dökkt']] },
     { key: 'palette', label: 'Litaþema', type: 'palette' },
     { key: 'textSize', label: 'Textastærð', type: 'choice', options: [['normal', 'Venjuleg'], ['large', 'Stærri']] },
@@ -84,6 +86,7 @@ export function normalize(s){
   if (!['classic', 'hraun', 'orka', 'nordurljos', 'solarlag', 'jokull'].includes(o.sportPalette)) o.sportPalette = DEFAULTS.sportPalette;
   o.sports = (Array.isArray(o.sports) ? o.sports : []).filter(id => SPORT_IDS.includes(id));
   if (!o.sports.length) o.sports = DEFAULTS.sports.slice();
+  if (!['is', 'en'].includes(o.lang)) o.lang = 'is';
   o.templates = (Array.isArray(o.templates) ? o.templates : []).filter(t => t && t.id && t.name && t.type).slice(0, 20);
   const hr = Number(o.maxHr); o.maxHr = hr >= 120 && hr <= 230 ? Math.round(hr) : null;
   return o;

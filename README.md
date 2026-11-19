@@ -145,6 +145,12 @@ endurtekninga hækkar þyngdin næst (+5 kg í fótum og rassi með stöng, +2 k
 - **Staðfesting netfangs**: við nýskráningu með netfangi er sendur staðfestingarpóstur og áminning birtist á
   forsíðunni þar til netfangið er staðfest.
 
+## Tungumál (íslenska og enska)
+
+Í Stillingum → Útlit er **Tungumál / Language** (og hnappur á innskráningarskjánum). Allur kóði og texti er áfram á
+íslensku; `js/i18n.js` þýðir viðmótið yfir á ensku jafnóðum (orðabók, mynstur fyrir texta með tölum, og ensk heiti
+æfinga). Dagar, mánuðir og tölusnið skipta líka um mál. Nýr texti í viðmótinu: bætið honum við `I18N_EN` í `i18n.js`.
+
 ## Tegundir setta, drop sett og súpersett (lyftingar)
 
 - Fyrir ofan hvert sett: **Venjulegt · Drop · Upphitun · Til þrots**. Upphitunarsett eru merkt **U** og teljast ekki í

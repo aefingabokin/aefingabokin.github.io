@@ -1,0 +1,21 @@
+const {JSDOM} = require('jsdom'); const fs = require('fs');
+let html = fs.readFileSync('./dev/out/aefingabokin-synishorn.html','utf8').replace(/<link[^>]*fonts[^>]*>/g,'').replace('<script type="module">','<script>');
+const dom = new JSDOM(html, { runScripts: 'dangerously', url: 'https://x.test/', pretendToBeVisual: true, beforeParse(w){ w.scrollTo = () => {}; w.confirm = () => true; w.Element.prototype.scrollIntoView = () => {}; } });
+const w = dom.window, d = w.document; const errs = []; w.addEventListener('error', e => errs.push(e.message));
+const wait = ms => new Promise(r => setTimeout(r, ms)); const T = s => (s || '').replace(/\s+/g, ' ').trim();
+(async () => {
+  await wait(3000);
+  console.log('stats heading:', T(d.querySelector('.sech').textContent), '| labels:', [...d.querySelectorAll('.stat .l')].map(x => x.textContent).join(','));
+  console.log('today label:', T(d.querySelector('.wd.today').textContent));
+  d.querySelector('[data-act="wprev"]').click(); await wait(100); console.log('prev week heading:', T(d.querySelector('.sech').textContent));
+  d.querySelector('.tabs [data-tab="friends"]').click(); await wait(150); d.querySelector('[data-act="addfriend"]').click(); await wait(80);
+  console.log('add friend label:', d.querySelector('label[for="fcode"]').textContent, '| share btn:', T(d.querySelector('[data-act="sharecode"]').textContent));
+  const f = d.querySelector('#fcode'); f.value = 'halla@daemi.is'; d.querySelector('[data-act="sendreq"]').click(); await wait(150);
+  console.log('email request toast:', d.querySelector('#toast').textContent);
+  d.querySelector('[data-act="addfriend"]').click(); await wait(50); d.querySelector('#fcode').value = 'enginn@daemi.is'; d.querySelector('[data-act="sendreq"]').click(); await wait(100);
+  console.log('unknown email:', d.querySelector('#toast').textContent);
+  w.__demo.invite('JON2XP'); await wait(150); console.log('already friend:', d.querySelector('#toast').textContent);
+  w.__demo.invite('HAL3ZK'); await wait(150); console.log('invite sheet:', T(d.querySelector('#sheetBody .invite') && d.querySelector('#sheetBody .invite').textContent));
+  d.querySelector('[data-act="invitesend"]').click(); await wait(150); console.log('after invitesend:', d.querySelector('#toast').textContent);
+  console.log('errors', errs); process.exit(0);
+})();

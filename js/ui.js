@@ -4,6 +4,7 @@
    ===================================================================== */
 import { readImportFile } from './importers.js';
 import { POOLS } from './pools.js';
+import { setLangActive } from './i18n.js';
 import { GROUPS, COMBOS, GOALS, LEVELS, EXMETA, buildPlan, prescribe, alternatives, estMinutes, restTxt, ROLE_NAME, rxFor } from './coach.js';
 import { PALETTES, HOME_CARDS, OPTIONAL_TABS, SCHEMA, normalize, readLocal, writeLocal, applyAppearance, prefersDark } from './settings.js';
 
@@ -14,7 +15,8 @@ const $ = (s, el = document) => el.querySelector(s);
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-5);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num = v => { if (v === '' || v == null) return null; const n = parseFloat(String(v).replace(/\s/g,'').replace(',', '.')); return isFinite(n) ? n : null; };
-const nf = (n, d = 0) => { if (n == null || !isFinite(n)) return '–'; try { return new Intl.NumberFormat('is-IS', {maximumFractionDigits: d}).format(n); } catch(e) { return String(Math.round(n * 10**d) / 10**d); } };
+let NUM_LOCALE = 'is-IS';
+const nf = (n, d = 0) => { if (n == null || !isFinite(n)) return '–'; try { return new Intl.NumberFormat(NUM_LOCALE, {maximumFractionDigits: d}).format(n); } catch(e) { return String(Math.round(n * 10**d) / 10**d); } };
 const fmtIn = v => (v == null || v === '') ? '' : String(v).replace('.', ',');
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -26,6 +28,18 @@ const DAYS = ['sun','mán','þri','mið','fim','fös','lau'];
 const DAYSFULL = ['Sunnudagur','Mánudagur','Þriðjudagur','Miðvikudagur','Fimmtudagur','Föstudagur','Laugardagur'];
 const MON = ['jan.','feb.','mars','apr.','maí','júní','júlí','ágú.','sep.','okt.','nóv.','des.'];
 const MONFULL = ['janúar','febrúar','mars','apríl','maí','júní','júlí','ágúst','september','október','nóvember','desember'];
+/* Tungumál: dagar, mánuðir og tölusnið skipta um mál; annar texti er þýddur í i18n.js */
+const LANG_DATA = { is: [DAYS.slice(), DAYSFULL.slice(), MON.slice(), MONFULL.slice(), 'is-IS'],
+  en: [['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+       ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], ['January','February','March','April','May','June','July','August','September','October','November','December'], 'en-GB'] };
+let curLang = 'is';
+function applyLang(l){
+  l = l === 'en' ? 'en' : 'is'; if (l === curLang) return; curLang = l;
+  const [d, df, m, mf, loc] = LANG_DATA[l];
+  DAYS.splice(0, 7, ...d); DAYSFULL.splice(0, 7, ...df); MON.splice(0, 12, ...m); MONFULL.splice(0, 12, ...mf); NUM_LOCALE = loc;
+  document.documentElement.lang = l; setLangActive(l === 'en');
+}
+const langSwitch = () => `<button class="langsw" data-act="langtoggle" aria-label="${curLang === 'en' ? 'Skipta yfir á íslensku' : 'Switch to English'}">${curLang === 'en' ? 'Íslenska' : 'English'}</button>`;
 const fmtDate = s => { const d = parseYmd(s); return `${DAYS[d.getDay()]} ${d.getDate()}. ${MON[d.getMonth()]}`; };
 const fmtShort = s => { const d = parseYmd(s); return `${d.getDate()}/${d.getMonth()+1}`; };
 const fmtClock = ms => { const t = Math.max(0, Math.floor(ms / 1000)), h = Math.floor(t/3600), m = Math.floor((t%3600)/60), s = t%60; return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`; };
@@ -429,12 +443,13 @@ const ICON = {
   down: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>'
 };
 function render(){
+  applyLang(settings.lang);
   (window.requestAnimationFrame || setTimeout)(() => { if (typeof measureTabs === 'function') measureTabs(); });
   pendingRender = false;
   document.body.dataset.gate = gate;
   document.body.dataset.tab = ui.tab || 'home';
   document.body.dataset.editing = draft && ui.tab === 'log' ? '1' : '0';
-  if (gate !== 'app') return renderGate();
+  if (gate !== 'app'){ renderGate(); view.insertAdjacentHTML('afterbegin', langSwitch()); return; }
   if (settings.tabsHidden.includes(ui.tab)) ui.tab = 'home';
   const who = $('#who');
   who.hidden = ui.tab === 'settings';
@@ -3538,6 +3553,7 @@ async function loadSettings(){
 function setSetting(key, value){
   if (['weekStyle', 'palette', 'theme', 'sportPalette'].includes(key)) trackAppearance(key, settings[key], value);
   settings = normalize({ ...settings, [key]: value }); commitSettings();
+  if (key === 'lang'){ applyLang(value); render(); }
 }
 function commitSettings(){
   applyAppearance(settings); writeLocal(settings);
@@ -3674,6 +3690,7 @@ document.addEventListener('click', async e => {
       break; }
     case 'invite': invite(); break;
     case 'sheetclose': closeSheet(); break;
+    case 'langtoggle': setSetting('lang', curLang === 'en' ? 'is' : 'en'); render(); break;
     case 'sumopen': openSummary(); break;
     case 'yearopen': openYear(); break;
     case 'sharecard': shareCard(); break;

@@ -1,0 +1,23 @@
+const {JSDOM} = require('jsdom'); const fs = require('fs');
+const load = f => { const html = fs.readFileSync(f,'utf8').replace(/<link[^>]*fonts[^>]*>/g,'').replace('<script type="module">','<script>');
+  return new JSDOM(html, { runScripts: 'dangerously', url: 'https://x.test/', pretendToBeVisual: true, beforeParse(w){ w.scrollTo = () => {}; w.confirm = () => true; w.Element.prototype.scrollIntoView = () => {}; } }); };
+const wait = ms => new Promise(r => setTimeout(r, ms)); const T = s => (s || '').replace(/\s+/g, ' ').trim();
+(async () => {
+  const dom = load('./dev/out/aefingabokin-synishorn.html'), w = dom.window, d = w.document, errs = []; w.addEventListener('error', e => errs.push(e.message));
+  await wait(3000);
+  d.querySelector('#settingsBtn').click(); await wait(50);
+  console.log('section rows:', [...d.querySelectorAll('.fbrow')].map(b => T(b.textContent)).join(' | '));
+  d.querySelector('[data-act="fbopen"][data-v="bug"]').click(); await wait(30);
+  console.log('form:', d.querySelector('#sheetTitle').textContent, '| selected:', d.querySelector('.fbtype[aria-checked="true"] b').textContent, '| send disabled:', d.querySelector('[data-act="fbsend"]').disabled);
+  const t = d.querySelector('#fbtext'); t.value = 'Hnappurinn hverfur'; t.dispatchEvent(new w.Event('input', { bubbles: true }));
+  d.querySelector('[data-act="fbtype"][data-v="idea"]').click(); await wait(30); console.log('text kept on type switch:', d.querySelector('#fbtext').value, '| count:', d.querySelector('#fbcount').textContent);
+  d.querySelector('#fbcontact').checked = true; d.querySelector('[data-act="fbsend"]').click(); await wait(50);
+  console.log('thanks:', T(d.querySelector('#sheetBody').textContent).slice(0, 80));
+  console.log('app errors', errs);
+  const a = load('./dev/out/aefingabokin-stjornbord-synishorn.html'), ad = a.window.document, aerr = []; a.window.addEventListener('error', e => aerr.push(e.message));
+  await wait(300);
+  console.log('admin fb:', T(ad.querySelector('.fbbadge').textContent), '| items:', ad.querySelectorAll('.fblist li').length);
+  ad.querySelector('[data-fbdone="f1"]').click(); await wait(30); console.log('after done:', ad.querySelectorAll('.fblist li').length, T(ad.querySelector('.fbbadge') ? ad.querySelector('.fbbadge').textContent : 'none'));
+  ad.querySelector('[data-fbfilter="all"]').click(); await wait(30); console.log('all:', ad.querySelectorAll('.fblist li').length, 'done:', ad.querySelectorAll('.fblist li.done').length);
+  console.log('admin errors', aerr); process.exit(0);
+})();
