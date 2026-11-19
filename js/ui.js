@@ -780,11 +780,13 @@ function renderLift(){
   view.innerHTML = `${edTop()}
     ${!isNewDraft() ? `<div class="editbar glass">${PENCIL}<span><b>Þú ert að breyta æfingu</b><span class="tiny">Breytingar vistast þegar þú ýtir á Vista.</span></span>
       <label class="edate"><span class="tiny">Dagsetning</span><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}"></label></div>` : ''}
+    <div class="lsplit"><div class="lmain">
     <div class="chips" role="group" aria-label="Æfingar í þessari lotu">
       ${exs.map((e, i) => `${e.ss && i > 0 && exs[i - 1].ss === e.ss ? `<span class="sschain" aria-hidden="true">${LINKI}</span>` : ''}<button class="chip ${e.ss ? 'ssc' : ''}" data-act="curex" data-ei="${i}" aria-pressed="${i === draft.cur}">${e.ss ? `<b class="ssl">${e.ss}${exs.slice(0, i + 1).filter(x => x.ss === e.ss).length}</b>` : ''}${esc(e.name || exName(e.exId))}<small>${e.sets.filter(st => st.type !== 'warm').length}</small></button>`).join('')}
       <button class="chip" data-act="pickex">+ Æfing</button>
     </div>
     ${body}
+    </div><div class="lside">
     ${ex ? `${draft.cdPre || (draft.cardio || []).some(x => x.when === 'pre') ? cardioEditor('pre') : ''}${cardioEditor('post')}` : ''}
     <label class="f" for="notes">Athugasemd</label>
     <textarea class="in" id="notes" data-field="notes" placeholder="Hvernig gekk?">${esc(draft.notes ?? '')}</textarea>
@@ -798,7 +800,8 @@ function renderLift(){
     <button class="btn ghost block" style="margin-top:8px" data-act="tplopen">Vista sem sniðmát</button>
     ${shareRow()}
     ${!isNewDraft() ? commentsBlock(draft.profileId, draft.id, draft.profileId === me.uid ? null : draft) : ''}
-    ${!isNewDraft() ? `<button class="btn ghost danger block" data-act="dellog">Eyða þessari æfingu</button>` : ''}`;
+    ${!isNewDraft() ? `<button class="btn ghost danger block" data-act="dellog">Eyða þessari æfingu</button>` : ''}
+    </div></div>`;
 }
 function renderCardio(){
   const T = TYPES[draft.type] || TYPES.other, cfg = typeCfg(draft.type, draft.sub), f = cfg.fields, unit = cfg.unit;
@@ -819,6 +822,7 @@ function renderCardio(){
   if (has('hr') && draft.type !== 'run') small.push(numF('hrRaw', 'Meðalpúls', 'slög', 'valfrjálst'));
   view.innerHTML = `${edTop()}
     ${!isNewDraft() ? `<div class="editbar glass">${PENCIL}<span><b>Þú ert að breyta æfingu</b><span class="tiny">Dagsetninguna og allt annað má laga hér. Breytingar vistast þegar þú ýtir á Vista.</span></span></div>` : ''}
+    <div class="lsplit"><div class="lmain">
     <div class="chips" role="group" aria-label="Íþrótt">${others.map(k => `<button class="chip" data-act="settype" data-t="${k}" aria-pressed="${k === draft.type}">${TYPES[k].name}</button>`).join('')}</div>
     ${subs.length ? `<div class="opts" style="padding:0 0 4px" role="group" aria-label="Tegund">${subs.map(k => `<button class="chip" data-act="setsub" data-s="${k}" aria-pressed="${draft.sub === k}">${subName(draft.type, k)}</button>`).join('')}
       ${T.customSub ? `<button class="chip" data-act="setsub" data-s="" aria-pressed="${!draft.sub}">${T.customSub}</button>` : ''}</div>` : ''}
@@ -851,6 +855,7 @@ function renderCardio(){
       <div class="srow" style="padding-top:0;min-height:0"><label for="hr"><b>Meðalpúls</b><div class="tiny">Valfrjálst, t.d. af úrinu</div></label>
         <input class="in" id="hr" data-field="hr" inputmode="numeric" placeholder="slög/mín" value="${esc(draft.hrRaw ?? '')}" style="max-width:130px;text-align:center"></div>
       <div class="slabel" style="padding-top:6px">Álag</div><div class="opts" id="effchips" role="group" aria-label="Álag"></div></div>` : ''}
+    </div><div class="lside">
     ${spaEditor()}
     <label class="f" for="ddate">Dagsetning</label><input class="in" id="ddate" type="date" data-field="date" value="${esc(draft.date)}">
     <label class="f" for="notes">Athugasemd</label>
@@ -859,7 +864,8 @@ function renderCardio(){
     <button class="btn ghost block" style="margin-top:8px" data-act="tplopen">Vista sem sniðmát</button>
     ${shareRow()}
     ${!isNewDraft() ? commentsBlock(draft.profileId, draft.id, draft.profileId === me.uid ? null : draft) : ''}
-    ${!isNewDraft() ? `<button class="btn ghost danger block" style="margin-top:10px" data-act="dellog">Eyða þessari æfingu</button>` : ''}`;
+    ${!isNewDraft() ? `<button class="btn ghost danger block" style="margin-top:10px" data-act="dellog">Eyða þessari æfingu</button>` : ''}
+    </div></div>`;
   updatePace();
 }
 function spaStats(){
@@ -3361,8 +3367,30 @@ function barChart(data, color, dec){
 }
 
 /* ---------- Spjöld ---------- */
-function openSheet(title, html){ $('#sheetTitle').textContent = title; $('#sheetBody').innerHTML = html; $('#sheet').classList.add('open'); $('#sheetBg').classList.add('open'); }
-function closeSheet(){ stopComments(); $('#sheet').classList.remove('open'); $('#sheetBg').classList.remove('open'); if (pendingRender) softRender(); }
+/* Gluggar: fókus færist inn í gluggann þegar hann opnast (án þess að lyklaborð símans opnist) og aftur á hnappinn sem opnaði hann */
+let sheetReturn = null;
+const sheetOpen = () => $('#sheet').classList.contains('open');
+function openSheet(title, html){
+  if (!sheetOpen()) sheetReturn = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+  $('#sheetTitle').textContent = title; $('#sheetBody').innerHTML = html; $('#sheet').classList.add('open'); $('#sheetBg').classList.add('open');
+  const sh = $('#sheet'); if (!sh.hasAttribute('tabindex')) sh.setAttribute('tabindex', '-1');
+  if (!sh.contains(document.activeElement)) try { sh.focus({ preventScroll: true }); } catch(_){}
+}
+function closeSheet(){
+  const was = sheetOpen();
+  stopComments(); $('#sheet').classList.remove('open'); $('#sheetBg').classList.remove('open'); if (pendingRender) softRender();
+  if (was && sheetReturn && sheetReturn.isConnected) try { sheetReturn.focus({ preventScroll: true }); } catch(_){}
+  sheetReturn = null;
+}
+/* Tab helst inni í opnum glugga */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || !sheetOpen()) return;
+  const f = [...$('#sheet').querySelectorAll('button:not([disabled]), [href], input:not([type="hidden"]):not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null || x === document.activeElement);
+  if (!f.length) return;
+  const first = f[0], last = f[f.length - 1], a = document.activeElement;
+  if (e.shiftKey && (a === first || a === $('#sheet'))){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && (a === last || !$('#sheet').contains(a))){ e.preventDefault(); first.focus(); }
+});
 $('#sheetClose').onclick = closeSheet; $('#sheetBg').onclick = closeSheet;
 document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (document.getElementById('reactPop')) return closeReact(); closeSheet(); } });
 
@@ -3516,6 +3544,7 @@ function renderSettings(){
     <div class="glass sgroup">
       <div class="srow"><span>Innskráð${me.email ? `<div class="tiny">${esc(me.email)}</div>` : ''}</span><button class="btn danger" data-act="signout">Skrá út</button></div>
     </div>
+    <button class="btn ghost block kbonly" style="margin-top:12px" data-act="kbhelp">Flýtilyklar á lyklaborði</button>
     <div class="soon">Fleiri stillingar bætast hér við eftir því sem appið stækkar.<br>${state.sessions.length} æfingar skráðar. Útgáfa ${APP_VERSION}</div>`;
   const f = $('#importFile'); if (f) f.addEventListener('change', importFile);
   if (ui.reorder) setupReorder($('#homeorder'));
@@ -3940,6 +3969,7 @@ document.addEventListener('click', async e => {
     case 'cdstep': { const x = draft.cardio[+d.i]; if (!x) break; const v = parseDur(x.raw) || 0;
       x.raw = String(Math.max(0, Math.round(v) + (+d.d)));
       const inp = view.querySelector(`[data-cd="${d.i}"]`); if (inp) inp.value = x.raw; saveDraft(); cardioLongUpdate(); break; }
+    case 'kbhelp': openShortcuts(); break;
     case 'cdpreopen': draft.cdPre = true; saveDraft(); render(); break;
     case 'cdfirst': closeSheet(); if (draft){ draft.cdPre = true; saveDraft(); } render(); window.scrollTo(0, 0); break;
     case 'seteffort': draft.effort = d.e || ''; saveDraft(); updatePace(); break;
@@ -3973,7 +4003,7 @@ $('#settingsBtn').addEventListener('click', openSettings);
    svo hægt sé að skruna öllu efni upp fyrir hana, líka þegar letur er stækkað í stillingum símans */
 function measureTabs(){
   const t = document.querySelector('.tabs'); if (!t) return;
-  if (window.matchMedia && window.matchMedia('(min-width: 1000px) and (orientation: landscape)').matches){ document.documentElement.style.setProperty('--tabspace', '0px'); return; }
+  if (window.matchMedia && window.matchMedia('(min-width: 840px)').matches){ document.documentElement.style.setProperty('--tabspace', '0px'); return; }
   const r = t.getBoundingClientRect();
   const raised = t.querySelector('.tab-log .plus'), top = raised ? Math.min(r.top, raised.getBoundingClientRect().top) : r.top;
   const space = r.height && getComputedStyle(t).display !== 'none' ? Math.ceil(window.innerHeight - top) : 0;
@@ -4064,7 +4094,36 @@ document.addEventListener('change', e => {
   if (d.tabtoggle){ setSetting('tabsHidden', toggleIn(settings.tabsHidden, d.tabtoggle, !t.checked)); return; }
 });
 document.addEventListener('focusout', () => { if (pendingRender) setTimeout(() => { if (pendingRender) softRender(); }, 0); });
-document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.dataset && e.target.dataset.cur){ e.preventDefault(); doneSet(); } });
+document.addEventListener('keydown', e => {
+  const t = e.target; if (!t.dataset || !t.dataset.cur) return;
+  if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey){ e.preventDefault(); doneSet(); }
+  /* Örvar upp og niður breyta þyngd eða endurtekningum um eitt skref, eins og + og − */
+  else if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.metaKey && !e.ctrlKey && !e.altKey){ e.preventDefault(); step(t.dataset.cur, e.key === 'ArrowUp' ? 1 : -1); t.select(); }
+});
+/* Flýtilyklar fyrir lyklaborð (spjaldtölvur, Fold með lyklaborði, tölvur). Virka ekki á meðan skrifað er í reit,
+   nema vistun (Ctrl/⌘ + S eða Ctrl/⌘ + Enter). */
+const KB_TABS = { '1': 'home', '2': 'friends', '3': 'log', '4': 'history', '5': 'progress' };
+const isTyping = t => t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+document.addEventListener('keydown', e => {
+  if (gate !== 'app' || e.defaultPrevented) return;
+  const mod = e.metaKey || e.ctrlKey;
+  if (mod && !e.altKey && !e.shiftKey && (e.key === 's' || e.key === 'S' || e.key === 'Enter') && draft && ui.tab === 'log' && !sheetOpen()){ e.preventDefault(); saveLog(); return; }
+  if (mod || e.altKey || isTyping(e.target) || sheetOpen()) return;
+  if (KB_TABS[e.key]){ const b = document.querySelector(`.tabs [data-tab="${KB_TABS[e.key]}"]`); if (b && !b.hidden){ e.preventDefault(); b.click(); } return; }
+  if ((e.key === 'n' || e.key === 'N') && !draft){ e.preventDefault(); ui.tab = 'log'; ui.planPreview = null; render(); window.scrollTo(0, 0); return; }
+  if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && ui.tab === 'home'){ const b = view.querySelector(`[data-act="${e.key === 'ArrowLeft' ? 'wprev' : 'wnext'}"]`); if (b && !b.disabled){ e.preventDefault(); b.click(); } return; }
+  if (e.key === '?'){ e.preventDefault(); openShortcuts(); }
+});
+function openShortcuts(){
+  const k = (...keys) => keys.map(x => `<kbd>${x}</kbd>`).join(' ');
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || ''), M = mac ? '⌘' : 'Ctrl';
+  const rows = [[k('1') + ' – ' + k('5'), 'Skipta um flipa: Vikan, Vinir, Skrá, Saga, Framfarir'], [k('N'), 'Ný æfing'],
+    [k('←') + ' ' + k('→'), 'Fyrri eða næsta vika á forsíðunni'], [k('Enter'), 'Skrá settið (í þyngd eða endurtekningum)'],
+    [k('↑') + ' ' + k('↓'), 'Breyta þyngd eða endurtekningum um eitt skref'], [k(M, 'S'), 'Vista eða ljúka æfingu'],
+    [k('Esc'), 'Loka glugga'], [k('Tab'), 'Fara á milli hnappa og reita'], [k('?'), 'Sýna þennan lista']];
+  openSheet('Flýtilyklar', `<table class="kbtable"><tbody>${rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</tbody></table>
+    <p class="tiny" style="margin-top:12px">Flýtilyklarnir virka ekki á meðan skrifað er í reit, nema vistun.</p>`);
+}
 
 /* ---------- Ræsing ---------- */
 if (!Store.configured){ gate = 'config'; render(); }

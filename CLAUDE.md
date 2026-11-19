@@ -26,10 +26,17 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Íslenska alls staðar í viðmóti, gæsalappir „ “ og bandstrik – í bilum (4–6). Engin emoji í viðmóti nema í hrósum og merkjum.
 - Íþróttalitir sem CSS-breytur `--c-<íþrótt>` með ljósum og dökkum útgáfum. Glerútlit, rofar í One UI-stíl.
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
-- Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px) og á hlið (≥1000 px, valmynd vinstra megin).
+- Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.5, CACHE v59)
-Útgáfa 3.4 (enska, nýtt app-tákn) er á GitHub. 3.5 bætir við:
+## Staða (útgáfa 3.6, CACHE v60)
+3.6: stórir skjáir samkvæmt Tier 2 hjá Google (Adaptive Optimized):
+- Valmynd vinstra megin (navigation rail) frá 840 px í hvaða stöðu sem er (áður aðeins ≥1000 px á hlið). `measureTabs` í `ui.js` notar sama mörk.
+- Skráning í tveimur dálkum frá 1000 px (`.lsplit` / `.lmain` / `.lside`, `display:contents` á minni skjám svo röðin haldist).
+- Mús og snertiplatti: bendill og yfirlitun (`--hov`) aðeins á tækjum með `(hover:hover) and (pointer:fine)`.
+- Flýtilyklar (`?` sýnir lista): 1–5 flipar, N ný æfing, ←/→ vikur, ↑/↓ þyngd/reps, Ctrl/⌘+S vistar. Fókus fer inn í glugga og til baka.
+- Ekki gert (Tier 1): hálfopinn sími / hjör.
+
+3.5:
 - Upphitun og niðurlag á þrektæki inni í lyftingaæfingu (`s.cardio = [{ when: 'pre'|'post', machine, min, dist?, kcal? }]`,
   `MACHINES` í `ui.js`). Telst ekki sem sér æfing og ekki í sett/magn/met. Næsta skref (bíður samþykkis): sér flokkur „Þrektæki“.
 - Talnareitir velja töluna þegar ýtt er á þá, svo ný tala skrifast beint yfir.
