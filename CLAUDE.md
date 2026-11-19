@@ -28,13 +28,14 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.6, CACHE v60)
+## Staða (útgáfa 3.6.1, CACHE v61)
 3.6: stórir skjáir samkvæmt Tier 2 hjá Google (Adaptive Optimized):
 - Valmynd vinstra megin (navigation rail) frá 840 px í hvaða stöðu sem er (áður aðeins ≥1000 px á hlið). `measureTabs` í `ui.js` notar sama mörk.
 - Skráning í tveimur dálkum frá 1000 px (`.lsplit` / `.lmain` / `.lside`, `display:contents` á minni skjám svo röðin haldist).
 - Mús og snertiplatti: bendill og yfirlitun (`--hov`) aðeins á tækjum með `(hover:hover) and (pointer:fine)`.
 - Flýtilyklar (`?` sýnir lista): 1–5 flipar, N ný æfing, ←/→ vikur, ↑/↓ þyngd/reps, Ctrl/⌘+S vistar. Fókus fer inn í glugga og til baka.
-- Ekki gert (Tier 1): hálfopinn sími / hjör.
+- Ekki gert (Tier 1): hálfopinn sími / hjör. Prófað og í lagi á Galaxy Z Fold8.
+- 3.6.1: nafnadálkur vikurits lagar sig að nafninu frá 700 px (68–140 px) svo nöfn styttist ekki („Hall…“).
 
 3.5:
 - Upphitun og niðurlag á þrektæki inni í lyftingaæfingu (`s.cardio = [{ when: 'pre'|'post', machine, min, dist?, kcal? }]`,

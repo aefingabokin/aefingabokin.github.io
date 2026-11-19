@@ -924,6 +924,8 @@ kbd{display:inline-block;min-width:26px;padding:3px 7px;border-radius:8px;border
 .wbar .av{flex:none}
 @media (min-width: 700px){.wbars{grid-template-columns:68px repeat(7,minmax(0,1fr))}.wbb{width:22px}.wbcol{min-height:190px;gap:8px}}
 @media (max-width:370px){.wbars{grid-template-columns:44px repeat(7,minmax(0,1fr));gap:4px}.wbb{width:12px}}
+/* Breiðari nafnadálkur á breiðum skjá svo nöfn styttist ekki að óþörfu (t.d. „Hall…“ á Fold) */
+@media (min-width: 700px){.week-grid,.wbars{grid-template-columns:minmax(68px,max-content) repeat(7,minmax(0,1fr))}.week-grid .wname,.wbars .wname{max-width:140px}}
 button.wbtn.wc-dots, button.wbtn.wc-tiles, button.wbtn.wc-rings{border:0;padding:0}
 .wc-tiles .tl{padding:4px 4px}
 /* Forskoðanir í stillingum */
