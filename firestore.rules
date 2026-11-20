@@ -119,12 +119,46 @@ service cloud.firestore {
 
     // ---------- Nafnlaus tölfræði ----------
     // Innskráðir notendur geta aðeins hækkað samtölur í þekktum skjölum. Enginn nema stjórnandi getur lesið þær.
+    // Án Cloud Functions er ekki hægt að tryggja hverja tölu, en reglurnar koma í veg fyrir það versta:
+    // ekki má fjarlægja reiti eða hreinsa flokka, helstu teljarar mega aðeins hækka (hóflega í einu)
+    // og hver skrif snerta fáa reiti.
+    function metricDoc(doc) {
+      return doc in ['totals', 'custom', 'cohorts']
+        || doc.matches('day-[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        || doc.matches('week-[0-9]{4}-W[0-9]{2}');
+    }
+    // Teljari k: heiltala sem hækkar ekki um meira en 5000 í einu (aldrei lækkar)
+    function counterOk(d, old, k) {
+      return !(k in d)
+        || (d[k] is int && d[k] >= old.get(k, 0) && d[k] <= old.get(k, 0) + 5000);
+    }
+    // Flokkur k (t.d. sessionsByType): verður að vera map og má ekki minnka (svo ekki sé hægt að tæma hann).
+    // Aðeins stærðin er borin saman: að bera saman alla lykla fer yfir 1000 aðgerða hámark reglnanna í stórum skjölum.
+    function groupOk(d, old, k) {
+      return !(k in d)
+        || (d[k] is map && d[k].size() >= old.get(k, {}).size());
+    }
+    function metricsOk(d, old) {
+      return d.keys().hasAll(old.keys())
+        && d.keys().size() <= 500
+        && d.diff(old).affectedKeys().size() <= 20
+        && counterOk(d, old, 'users') && counterOk(d, old, 'newUsers') && counterOk(d, old, 'active')
+        && counterOk(d, old, 'sessions') && counterOk(d, old, 'installed') && counterOk(d, old, 'aboutFilled')
+        && counterOk(d, old, 'comments') && counterOk(d, old, 'challenges') && counterOk(d, old, 'couples')
+        && counterOk(d, old, 'friendships')
+        && groupOk(d, old, 'sessionsByType') && groupOk(d, old, 'platform') && groupOk(d, old, 'hours')
+        && groupOk(d, old, 'sportsSelected') && groupOk(d, old, 'visibility') && groupOk(d, old, 'appearance')
+        && groupOk(d, old, 'subs') && groupOk(d, old, 'exercises') && groupOk(d, old, 'spa')
+        && groupOk(d, old, 'cfPbs') && groupOk(d, old, 'pools') && groupOk(d, old, 'imports')
+        && groupOk(d, old, 'runEffort') && groupOk(d, old, 'kudos') && groupOk(d, old, 'challengeMetric')
+        && groupOk(d, old, 'goals') && groupOk(d, old, 'goalsAchieved') && groupOk(d, old, 'plans')
+        && groupOk(d, old, 'planGoal') && groupOk(d, old, 'planLevel') && groupOk(d, old, 'badges')
+        && groupOk(d, old, 'names');
+    }
     match /metrics/{doc} {
       allow read, delete: if isAdmin();
-      allow create, update: if signedIn()
-        && (doc in ['totals', 'custom', 'cohorts']
-            || doc.matches('day-[0-9]{4}-[0-9]{2}-[0-9]{2}')
-            || doc.matches('week-[0-9]{4}-W[0-9]{2}'));
+      allow create: if signedIn() && metricDoc(doc) && metricsOk(request.resource.data, {});
+      allow update: if signedIn() && metricDoc(doc) && metricsOk(request.resource.data, resource.data);
     }
 
     // ---------- Ábendingar ----------
@@ -140,9 +174,10 @@ service cloud.firestore {
     }
 
     // ---------- Vinir ----------
-    // Nafn og vinakóði: innskráðir notendur geta séð nöfn
+    // Nafn og vinakóði: innskráðir notendur geta sótt eitt skjal í einu (uid þarf að vera þekkt), ekki lista yfir alla
     match /people/{uid} {
-      allow read: if signedIn();
+      allow get: if signedIn();
+      allow list: if false;
       allow write: if signedIn() && me() == uid && validPhoto(request.resource.data);
     }
     // Prófílmynd má vera að hámarki um 150 kB og aðeins JPEG, PNG eða WebP

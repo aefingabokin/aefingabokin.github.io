@@ -35,6 +35,8 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Mús og snertiplatti: bendill og yfirlitun (`--hov`) aðeins á tækjum með `(hover:hover) and (pointer:fine)`.
 - Flýtilyklar (`?` sýnir lista): 1–5 flipar, N ný æfing, ←/→ vikur, ↑/↓ þyngd/reps, Ctrl/⌘+S vistar. Fókus fer inn í glugga og til baka.
 - Ekki gert (Tier 1): hálfopinn sími / hjör. Prófað og í lagi á Galaxy Z Fold8.
+- Öryggisreglur (20. nóv.): `people` aðeins `get` (ekki listi); `metrics` hert (teljarar hækka aðeins, flokkar minnka ekki,
+  mest 20 reitir í skrifi). Ekki bera saman alla lykla í flokkum: fer yfir 1000 aðgerða hámark reglnanna. Prófað í hermi.
 - 3.6.1: nafnadálkur vikurits lagar sig að nafninu frá 700 px (68–140 px) svo nöfn styttist ekki („Hall…“).
 
 3.5:
