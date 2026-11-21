@@ -30,7 +30,12 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.7, CACHE v63)
+## Staða (útgáfa 3.7.1, CACHE v64)
+3.7.1: eftir skráð sett byrjar næsta sett á sömu tölum og voru skráðar (`keptCur`; í æfingaplani sama þyngd og reps
+samkvæmt plani). Áður var tekið sett frá síðustu æfingu eftir númeri og upphitunarsett talin með, sem gaf ranga þyngd
+(t.d. 17,5 kg). `suggestion` telur nú aðeins vinnusett. Breyting á eldra setti (og hætt við) skilar tölunum sem voru í
+vinnslu (`draft.editPrev`) og eyðing setts endurstillir þær ekki.
+
 3.7: talnaborð appsins (`js/keypad.js`) í stað lyklaborðs símans í þyngd og endurtekningum lyftinga (líka styrktarhluta):
 - Reitirnir eru venjulegir `<input>` með `inputmode="none"` og `data-kp="kg|reps"`, `data-kpid` (finnst aftur eftir teikningu)
   og `data-kpdock` (lyftingaspjaldið: talnaborðið helst opið á breiðum skjá). Aðeins á snertiskjám (`pointer: coarse`).

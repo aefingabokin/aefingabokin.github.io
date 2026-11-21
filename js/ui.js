@@ -417,8 +417,8 @@ function lastPerformance(exId, excludeId, pid){
 }
 const lastSetsOf = ex => (lastPerformance(ex.exId, draft && draft.id, draft && draft.profileId) || {sets: []}).sets;
 function suggestion(ex, idx){
-  const last = lastSetsOf(ex), i = idx ?? ex.sets.length;
-  const s = last[i] || ex.sets[i - 1] || last[last.length - 1];
+  const last = lastSetsOf(ex), work = ex.sets.filter(st => st.type !== 'warm'), i = idx ?? work.length;   /* upphitun telst ekki með, eins og í „Síðast“ */
+  const s = last[i] || work[i - 1] || last[last.length - 1];
   return s ? {kg: fmtIn(s.kg), reps: String(s.reps ?? '')} : {kg: '', reps: ''};
 }
 function compare(st, prev){
@@ -1130,11 +1130,14 @@ function doneSet(){
     if (t === 'warm'){ ex.cur = { ...ex.cur }; saveDraft(); render(); return; }
     afterWorkSet(ex, st); return;
   }
-  ex.cur = ex.t ? { kg: fmtIn(st.kg), reps: String(ex.t.reps) } : suggestion(ex); saveDraft(); render();
+  const lw = ex.sets.filter(x => x.type !== 'warm').slice(-1)[0] || st;
+  ex.cur = draft.editPrev || keptCur(ex, lw); draft.editPrev = null; saveDraft(); render();
 }
 /* Eftir vinnusett: hvíld hefst, eða í súpersetti farið beint í næstu æfingu hópsins */
+/* Næsta sett byrjar á sömu tölum og settið sem var skráð (í æfingaplani: sama þyngd og reps samkvæmt planinu) */
+const keptCur = (ex, st) => ({ kg: fmtIn(st.kg), reps: String(ex.t ? ex.t.reps : (st.reps ?? '')) });
 function afterWorkSet(ex, st){
-  ex.cur = ex.t ? { kg: fmtIn(st.kg), reps: String(ex.t.reps) } : suggestion(ex);
+  ex.cur = keptCur(ex, st);
   const g = ssGroup(draft.exercises, draft.cur);
   if (g){
     const k = g.idx.indexOf(draft.cur);
@@ -2685,7 +2688,7 @@ function commentCard(){
 }
 
 /* ---------- Ábendingar ---------- */
-const APP_VERSION = '3.7';
+const APP_VERSION = '3.7.1';
 const FB_TYPES = { idea: { name: 'Hugmynd', desc: 'Viðbót eða breyting sem væri gaman að sjá', ph: 'T.d. væri gott að geta…' },
   bug: { name: 'Villa', desc: 'Eitthvað virkar ekki eins og það á að gera', ph: 'Hvað gerðist, og hvað áttirðu von á?' },
   other: { name: 'Annað', desc: 'Hrós, spurning eða annað', ph: 'Skrifaðu hér…' } };
@@ -3991,10 +3994,12 @@ document.addEventListener('click', async e => {
     case 'step': step(d.k, +d.d); break;
     case 'doneset': doneSet(); break;
     case 'donelast': doneLast(); break;
-    case 'editset': { if (draft.dropOf != null) endDropSilently(); const ex = curEx(), st = ex.sets[+d.si]; draft.editSet = +d.si; ex.cur = {kg: fmtIn(st.kg), reps: String(st.reps)}; saveDraft(); render(); window.scrollTo(0, 0); break; }
-    case 'canceledit': { const ex = curEx(); draft.editSet = null; ex.cur = suggestion(ex); saveDraft(); render(); break; }
+    case 'editset': { if (draft.dropOf != null) endDropSilently(); const ex = curEx(), st = ex.sets[+d.si]; if (draft.editSet == null) draft.editPrev = { ...ex.cur };
+      draft.editSet = +d.si; ex.cur = {kg: fmtIn(st.kg), reps: String(st.reps)}; saveDraft(); render(); window.scrollTo(0, 0); break; }
+    case 'canceledit': { const ex = curEx(); draft.editSet = null; ex.cur = draft.editPrev || suggestion(ex); draft.editPrev = null; saveDraft(); render(); break; }
     case 'editdropstop': break;
-    case 'rmset': { const ex = curEx(); ex.sets.splice(+d.si, 1); draft.editSet = null; draft.dropOf = null; draft.setType = 'normal'; ex.cur = suggestion(ex); saveDraft(); render(); break; }
+    case 'rmset': { const ex = curEx(); ex.sets.splice(+d.si, 1); if (draft.editSet != null) ex.cur = draft.editPrev || ex.cur;
+      draft.editSet = null; draft.editPrev = null; draft.dropOf = null; draft.setType = 'normal'; if (!ex.cur) ex.cur = suggestion(ex); saveDraft(); render(); break; }
     case 'rmex': draft.exercises.splice(draft.cur, 1); draft.cur = Math.max(0, draft.cur - 1); draft.editSet = null; saveDraft(); render(); break;
     case 'settype': draft.type = d.t; if (!subsOf(d.t) || !(draft.sub in subsOf(d.t))) draft.sub = firstSub(d.t); saveDraft(); render(); break;
     case 'setsub': draft.sub = d.s || null; saveDraft(); render(); break;

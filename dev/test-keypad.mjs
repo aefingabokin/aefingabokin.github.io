@@ -55,6 +55,19 @@ try {
   key('8'); await wait();
   key('next'); await wait(100);
   console.log('skráð:', [...d.querySelectorAll('.done .sv')].map(x => x.firstChild.textContent.trim()).join(', '), '| talnaborð lokað:', d.querySelector('.kp').hidden);
+  const cur = () => d.querySelector('[data-cur="kg"]').value + ' × ' + d.querySelector('[data-cur="reps"]').value;
+  console.log('næsta sett heldur tölunum:', cur());
+  /* Upphitun telst ekki með: næsta vinnusett heldur sínum tölum, og breyting á eldra setti skilar tölunum í vinnslu aftur */
+  click('[data-act="settype"][data-v="warm"]'); await wait();
+  const set = (k, v) => { const el = d.querySelector(`[data-cur="${k}"]`); el.value = v; el.dispatchEvent(new w.Event('input', { bubbles: true })); };
+  set('kg', '40'); set('reps', '15'); click('[data-act="doneset"]'); await wait();
+  set('kg', '100'); set('reps', '6'); click('[data-act="doneset"]'); await wait();
+  console.log('eftir upphitun og vinnusett:', cur());
+  set('kg', '102,5'); click('[data-act="editset"][data-si="0"]'); await wait();
+  console.log('í breytingu:', cur()); click('[data-act="canceledit"]'); await wait();
+  console.log('hætt við breytingu:', cur());
+  click('[data-act="rmset"][data-si="1"]'); await wait();
+  console.log('eftir að upphitun var eytt:', cur(), '| sett:', [...d.querySelectorAll('.done .sv')].map(x => x.firstChild.textContent.trim()).join(', '));
   app.stop(); console.log('errors', errs);
 } catch (e) { console.log('FAIL', e.stack, errs); }
 process.exit(0);
