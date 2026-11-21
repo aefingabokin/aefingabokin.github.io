@@ -775,8 +775,8 @@ button.wbtn:active{transform:scale(.94)}
   .sheet{left:50%;right:auto;width:min(620px, calc(100vw - 48px));transform:translateX(-50%);bottom:24px;border-radius:26px;border:1px solid var(--glass-line);max-height:min(86vh, 820px)}
   .sheet.open{transform:translateX(-50%)}
 }
-/* Stórir skjáir (Expanded, ≥840 px, hvort sem síminn snýr upp eða á hlið): valmynd vinstra megin (navigation rail) */
-@media (min-width: 840px){
+/* Valmynd vinstra megin (navigation rail): frá 840 px, og frá 700 px ef skjárinn er nógu hár (opinn Fold, líka með stærra letri/skjáaðdrætti). Sími á hlið heldur stikunni neðst. */
+@media (min-width: 840px), (min-width: 700px) and (min-height: 600px){
   body[data-gate="app"]{padding-left:108px}
   .tabs{left:16px;top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column;gap:6px;padding:10px 6px;border-radius:30px}
   .tabs button{min-width:76px;height:60px}
@@ -837,7 +837,7 @@ kbd{display:inline-block;min-width:26px;padding:3px 7px;border-radius:8px;border
 /* Skrá-hnappurinn: hringurinn lyftist upp fyrir stikuna og textinn fær sitt pláss undir honum */
 .tabs button.tab-log{justify-content:flex-end;gap:4px;padding-bottom:5px;overflow:visible}
 .tabs button.tab-log .plus{margin-top:-30px;flex:none}
-@media (min-width: 840px){
+@media (min-width: 840px), (min-width: 700px) and (min-height: 600px){
   .tabs button.tab-log{justify-content:center;padding-bottom:0;height:84px}
   .tabs button.tab-log .plus{margin-top:0}
 }
@@ -1143,6 +1143,15 @@ body[data-editing="1"] #who{display:none}
 
 /* Tungumálahnappur á innskráningarskjám */
 .langsw{position:absolute;top:calc(14px + env(safe-area-inset-top, 0px));right:16px;z-index:5;min-height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--glass-line);background:var(--glass);color:var(--ink);font-weight:700;font-size:14px}
+/* 3.6.2: Vikurit á forsíðu í mjóum skjá (t.d. ytri skjár Fold): aðeins mynd/upphafsstafur, nafnið er efst í hausnum og fyrir skjálesara */
+@media (max-width: 699px){
+  .week-grid.homewk{grid-template-columns:28px repeat(7,minmax(0,1fr))}
+  .week-grid.homewk .wname{justify-content:center;gap:0}
+  .week-grid.homewk .wname span:last-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+}
+/* Markmið á forsíðu: hringirnir dreifast yfir spjaldið og logarnir standa í sömu hæð */
+.gmini .streak{margin-top:auto}
+@media (min-width: 700px){.grow{grid-template-columns:repeat(auto-fit,minmax(110px,1fr))}}
 </style>
 </head>
 <body data-gate="loading">

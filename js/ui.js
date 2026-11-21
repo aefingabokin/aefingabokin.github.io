@@ -621,7 +621,7 @@ function renderHome(){
         <div class="navbtns"><button data-act="wprev" aria-label="Fyrri vika">${ICON.l}</button><button data-act="wnext" aria-label="Næsta vika" ${ui.weekOffset >= 0 ? 'disabled' : ''}>${ICON.r}</button></div></div>
       ${weekStyleOf() === 'bars'
         ? `<div class="week-grid nobars"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}</div>${weekBars(days, t)}`
-        : `<div class="week-grid"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}${rows}</div>`}
+        : `<div class="week-grid homewk"><div></div>${days.map(d => { const x = parseYmd(d); return `<div class="wd ${d === t ? 'today' : ''}">${DAYS[x.getDay()]}<b>${x.getDate()}</b></div>`; }).join('')}${rows}</div>`}
       ${legendHtml(used.length ? used : Object.keys(TYPES).filter(k => sportOn(k)))}
     </section>`,
     stats: `<div class="sech"><b>${state.active === me.uid ? 'Vikan þín í tölum' : `Vikan hjá ${esc(pname(state.active))} í tölum`}</b>
@@ -4003,7 +4003,7 @@ $('#settingsBtn').addEventListener('click', openSettings);
    svo hægt sé að skruna öllu efni upp fyrir hana, líka þegar letur er stækkað í stillingum símans */
 function measureTabs(){
   const t = document.querySelector('.tabs'); if (!t) return;
-  if (window.matchMedia && window.matchMedia('(min-width: 840px)').matches){ document.documentElement.style.setProperty('--tabspace', '0px'); return; }
+  if (window.matchMedia && window.matchMedia('(min-width: 840px), (min-width: 700px) and (min-height: 600px)').matches){ document.documentElement.style.setProperty('--tabspace', '0px'); return; }
   const r = t.getBoundingClientRect();
   const raised = t.querySelector('.tab-log .plus'), top = raised ? Math.min(r.top, raised.getBoundingClientRect().top) : r.top;
   const space = r.height && getComputedStyle(t).display !== 'none' ? Math.ceil(window.innerHeight - top) : 0;

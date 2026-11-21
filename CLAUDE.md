@@ -28,9 +28,9 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.6.1, CACHE v61)
+## Staða (útgáfa 3.6.2, CACHE v62)
 3.6: stórir skjáir samkvæmt Tier 2 hjá Google (Adaptive Optimized):
-- Valmynd vinstra megin (navigation rail) frá 840 px í hvaða stöðu sem er (áður aðeins ≥1000 px á hlið). `measureTabs` í `ui.js` notar sama mörk.
+- Valmynd vinstra megin (navigation rail) frá 840 px í hvaða stöðu sem er (frá 3.6.2 líka 700 px á háum skjá) (áður aðeins ≥1000 px á hlið). `measureTabs` í `ui.js` notar sama mörk.
 - Skráning í tveimur dálkum frá 1000 px (`.lsplit` / `.lmain` / `.lside`, `display:contents` á minni skjám svo röðin haldist).
 - Mús og snertiplatti: bendill og yfirlitun (`--hov`) aðeins á tækjum með `(hover:hover) and (pointer:fine)`.
 - Flýtilyklar (`?` sýnir lista): 1–5 flipar, N ný æfing, ←/→ vikur, ↑/↓ þyngd/reps, Ctrl/⌘+S vistar. Fókus fer inn í glugga og til baka.
@@ -38,6 +38,10 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Öryggisreglur (20. nóv.): `people` aðeins `get` (ekki listi); `metrics` hert (teljarar hækka aðeins, flokkar minnka ekki,
   mest 20 reitir í skrifi). Ekki bera saman alla lykla í flokkum: fer yfir 1000 aðgerða hámark reglnanna. Prófað í hermi.
 - 3.6.1: nafnadálkur vikurits lagar sig að nafninu frá 700 px (68–140 px) svo nöfn styttist ekki („Hall…“).
+- 3.6.2: valmynd vinstra megin líka frá 700 px ef skjárinn er ≥600 px hár (Fold8 Ultra opinn er undir 840 px, t.d. með
+  skjáaðdrætti); sími á hlið heldur stikunni neðst. Sama skilyrði í `measureTabs`. Vikurit á forsíðu undir 700 px sýnir
+  aðeins mynd/upphafsstaf (`.homewk`, nafnið falið fyrir augu en ekki skjálesara), ekki „Ar…“. Markmiðahringir dreifast
+  yfir spjaldið frá 700 px og logarnir standa í sömu hæð.
 
 3.5:
 - Upphitun og niðurlag á þrektæki inni í lyftingaæfingu (`s.cardio = [{ when: 'pre'|'post', machine, min, dist?, kcal? }]`,
@@ -52,6 +56,6 @@ Eldri hönnunarvinna (í claude.ai): sýnishorn appsins, merkjatillögur, vikuri
 drop sett og súpersett, og sjö síðna kynningarbæklingur.
 
 ## Hugmyndir sem bíða (ekki byrja án samþykkis Arons)
-Hóp- og vinnustaðakeppnir (í anda Lífshlaupsins), Android-app með Health Connect og tilkynningum, lengri
+Hóp- og vinnustaðakeppnir (í anda Lífshlaupsins), Android-app með Health Connect, tilkynningum og Now Bar á Samsung (Android 16 Live Updates: æfing í gangi, næsta sett, hvíldartími niðurtalning, „Skrá sett“ af lásskjá; krefst Android-kóða, ekki hægt í PWA), lengri
 æfingaprógrömm (4–12 vikur), sex útlitstillögur að „Vöðvum vikunnar“ (A–F), val á merki appsins, sjálfvirk afritun
 og prófunarumhverfi.
