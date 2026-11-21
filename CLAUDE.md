@@ -8,6 +8,7 @@ Vefslóð: https://aefingabokin.github.io (GitHub Pages, stofnunin `aefingabokin
 - `js/ui.js` – allt viðmót og rökfræði (stór skrá). `js/store.js` – Firebase (Auth + Firestore). `js/settings.js` – stillingar.
 - `js/coach.js` – æfingaplan/einkaþjálfari (vöðvaflokkar, plön, markmið, tvöföld framvinda).
 - `js/importers.js` – innlestur úr úrum (Garmin, Strava, Apple Health, GPX/TCX). `js/pools.js` – 128 sundlaugar.
+- `js/keypad.js` – talnaborð appsins (3.7) og plötureikningur. `ui.js` sér um samhengið (`kpCtx`) og aðgerðirnar (`kpAct`).
 - `admin/` + `js/admin.js`, `js/admin-view.js` – stjórnborð (aðeins nafnlausar samtölur í `metrics/`).
 - `firestore.rules` – öryggisreglur. Í opna kóðanum stendur `NETFANG_STJORNANDA`; raunverulega netfangið er aðeins í reglunum sem eru birtar í Firebase. Aldrei setja raunverulegt netfang í gagnasafnið.
 - `sw.js` – service worker. **Hækka `CACHE` (aefingabokin-vNN) í hverri útgáfu** svo símar sæki nýjar skrár, og bæta nýjum js-skrám í `SHELL`.
@@ -18,7 +19,8 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 
 ## Sýnishorn og prófanir (`dev/`)
 - `python3 dev/build_demo.py` býr til sjálfstætt sýnishorn með tilbúnum gögnum (`dev/demo_store.js` kemur í stað Firebase,
-  `dev/demo_nav.js` er „Skoða skjái“-valmyndin). Úttak: `dev/out/aefingabokin-synishorn.html`.
+  `dev/demo_nav.js` er „Skoða skjái“-valmyndin). Úttak: `dev/out/aefingabokin-synishorn.html`. Ný js-eining þarf líka að
+  fara inn í `build_demo.py` (eins og `keypad.js`).
 - `node dev/test-*.js` / `.mjs` – jsdom-prófanir á sýnishorninu (þarf `npm i jsdom`). Slóðir voru færðar úr eldra umhverfi
   og gætu þurft smá lagfæringar. Prófanirnar eiga að enda á `errors []`.
 
@@ -28,13 +30,30 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.6.2, CACHE v62)
+## Staða (útgáfa 3.7, CACHE v63)
+3.7: talnaborð appsins (`js/keypad.js`) í stað lyklaborðs símans í þyngd og endurtekningum lyftinga (líka styrktarhluta):
+- Reitirnir eru venjulegir `<input>` með `inputmode="none"` og `data-kp="kg|reps"`, `data-kpid` (finnst aftur eftir teikningu)
+  og `data-kpdock` (lyftingaspjaldið: talnaborðið helst opið á breiðum skjá). Aðeins á snertiskjám (`pointer: coarse`).
+- Takkar: tölur, komma, eyða, −/+ (sama skref og stepper, `kgStep`), „Næsta“ (þyngd → reps), „Skrá“ (kallar á `doneSet`),
+  „Sama“ (reps úr síðasta setti) og fela. Haldið inni á −/+/eyða endurtekur.
+- Plötur á stöng (æfingar með `eq: 'bar'` í `EXMETA`, eða „stöng“ í nafni): fæstar plötur á hlið, litakóði 25/2,5 rauð,
+  20/2 blá, 15/1,5 gul, 10/1 græn, 5/0,5 hvít, 1,25 stál. Ef þyngdin gengur ekki upp eru næstu þyngdir sýndar sem hnappar.
+- Þrjár útgáfur: sími (spjald neðst, lokast eftir „Skrá“), breiður skjá ≥700 px (fast spjald hægra megin, `body.kp-dock`),
+  Flex-hamur (`vertical-viewport-segments: 2`, Fold hálfopinn á hlið: settið efst, takkar neðst). Prófað í hermi.
+- Stillingar (Skráning): `keypad` on/off, `barKg` (20/15/10), `plates` (plötur í ræktinni), `barEx` (stöng fyrir æfingu,
+  valið með „Stöng 20 kg“ á talnaborðinu).
+- „Nýtt í Æfingabókinni“: gluggi einu sinni eftir uppfærslu hjá þeim sem hafa skráð æfingu (`settings.news`, `NEWS` í `ui.js`).
+  Hækka `NEWS` og skrifa nýjan texta í `openNews` þegar næsta kynning kemur. Einnig undir Stillingar → Hjálp.
+- `APP_VERSION` er nú `'3.7'` (fer með villutilkynningum). `dev/build_demo.py` virkar aftur. Prófanir: 33 af 36 standast
+  (`dev/test-keypad.mjs` nýtt); sömu þrjár vantar prófunargögn. `test-runs.mjs` og `test-friends.mjs` geta fallið á tíma
+  þegar allt er keyrt samhliða en standast ein og sér.
+
 3.6: stórir skjáir samkvæmt Tier 2 hjá Google (Adaptive Optimized):
 - Valmynd vinstra megin (navigation rail) frá 840 px í hvaða stöðu sem er (frá 3.6.2 líka 700 px á háum skjá) (áður aðeins ≥1000 px á hlið). `measureTabs` í `ui.js` notar sama mörk.
 - Skráning í tveimur dálkum frá 1000 px (`.lsplit` / `.lmain` / `.lside`, `display:contents` á minni skjám svo röðin haldist).
 - Mús og snertiplatti: bendill og yfirlitun (`--hov`) aðeins á tækjum með `(hover:hover) and (pointer:fine)`.
 - Flýtilyklar (`?` sýnir lista): 1–5 flipar, N ný æfing, ←/→ vikur, ↑/↓ þyngd/reps, Ctrl/⌘+S vistar. Fókus fer inn í glugga og til baka.
-- Ekki gert (Tier 1): hálfopinn sími / hjör. Prófað og í lagi á Galaxy Z Fold8.
+- Tier 1 (hálfopinn sími / hjör): aðeins talnaborðið í Flex-ham (3.7). Prófað og í lagi á Galaxy Z Fold8.
 - Öryggisreglur (20. nóv.): `people` aðeins `get` (ekki listi); `metrics` hert (teljarar hækka aðeins, flokkar minnka ekki,
   mest 20 reitir í skrifi). Ekki bera saman alla lykla í flokkum: fer yfir 1000 aðgerða hámark reglnanna. Prófað í hermi.
 - 3.6.1: nafnadálkur vikurits lagar sig að nafninu frá 700 px (68–140 px) svo nöfn styttist ekki („Hall…“).
@@ -56,6 +75,8 @@ Eldri hönnunarvinna (í claude.ai): sýnishorn appsins, merkjatillögur, vikuri
 drop sett og súpersett, og sjö síðna kynningarbæklingur.
 
 ## Hugmyndir sem bíða (ekki byrja án samþykkis Arons)
-Hóp- og vinnustaðakeppnir (í anda Lífshlaupsins), Android-app með Health Connect, tilkynningum og Now Bar á Samsung (Android 16 Live Updates: æfing í gangi, næsta sett, hvíldartími niðurtalning, „Skrá sett“ af lásskjá; krefst Android-kóða, ekki hægt í PWA), lengri
+Hóp- og vinnustaðakeppnir (í anda Lífshlaupsins), Android-app með Health Connect, tilkynningum og Now Bar á Samsung
+(Android 16 Live Updates: æfing í gangi, næsta sett, hvíldartími niðurtalning, „Skrá sett“ af lásskjá; krefst Android-kóða,
+ekki hægt í PWA), talnaborð appsins í fleiri reiti (tími, vegalengd, kaloríur; þarf „:“), lengri
 æfingaprógrömm (4–12 vikur), sex útlitstillögur að „Vöðvum vikunnar“ (A–F), val á merki appsins, sjálfvirk afritun
 og prófunarumhverfi.

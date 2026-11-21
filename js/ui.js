@@ -6,7 +6,8 @@ import { readImportFile } from './importers.js';
 import { POOLS } from './pools.js';
 import { setLangActive } from './i18n.js';
 import { GROUPS, COMBOS, GOALS, LEVELS, EXMETA, buildPlan, prescribe, alternatives, estMinutes, restTxt, ROLE_NAME, rxFor } from './coach.js';
-import { PALETTES, HOME_CARDS, OPTIONAL_TABS, SCHEMA, normalize, readLocal, writeLocal, applyAppearance, prefersDark } from './settings.js';
+import { PALETTES, HOME_CARDS, OPTIONAL_TABS, SCHEMA, PLATE_KG, normalize, readLocal, writeLocal, applyAppearance, prefersDark } from './settings.js';
+import { createKeypad, barHtml, plateColor } from './keypad.js';
 
 export function startApp(Store){
 
@@ -347,6 +348,7 @@ let state = { profiles: [], active: null, customExercises: [], sessions: [] };
 let draft = null;
 let ui = { tab: 'home', weekOffset: 0, histFilter: 'all', histBoth: false, progMode: 'goals', progEx: null, progType: 'run', bodyMetric: null, bodyRange: '3m', exScope: 'mine', exFmt: 'is', fMode: 'week', fWeekOffset: 0, boardMetric: 'sessions' };
 let settings = readLocal(), prevTab = 'home', setSaveT = null;
+let kp = null, kpLift = null;   /* talnaborð appsins (keypad.js) og samhengi núverandi setts */
 let newSignup = false;
 let authMode = 'start', authErr = '', authInfo = '', authBusy = false, authShowPw = false, authEmail = '', pendingName = '';
 let about = null, measurements = [], measUnsub = null;
@@ -474,7 +476,7 @@ function render(){
   document.body.dataset.gate = gate;
   document.body.dataset.tab = ui.tab || 'home';
   document.body.dataset.editing = draft && ui.tab === 'log' ? '1' : '0';
-  if (gate !== 'app'){ renderGate(); view.insertAdjacentHTML('afterbegin', langSwitch()); return; }
+  if (gate !== 'app'){ if (kp) kp.close(); renderGate(); view.insertAdjacentHTML('afterbegin', langSwitch()); return; }
   if (settings.tabsHidden.includes(ui.tab)) ui.tab = 'home';
   const who = $('#who');
   who.hidden = ui.tab === 'settings';
@@ -489,6 +491,7 @@ function render(){
   else if (ui.tab === 'settings') renderSettings();
   else renderProgress();
   tick();
+  if (kp) kp.sync();
 }
 /* Ekki teikna upp á nýtt meðan verið er að skrifa í reit (gögn geta borist frá hinu tækinu) */
 function softRender(){
@@ -726,6 +729,9 @@ function renderLift(){
     const setLabel = editing ? `${PENCIL} Breyta ${stype === 'warm' ? 'upphitunarsetti' : `setti ${wi}`}` : stype === 'warm' ? 'Upphitunarsett' : dropping ? `Sett ${workN} · drop ${dropping.drops.length + 1}` : `Sett ${wi}`;
     const btnLabel = dropping ? `Skrá drop ${dropping.drops.length + 1}` : stype === 'warm' ? 'Skrá upphitun' : stype === 'drop' ? 'Skrá byrjun' : g ? `Skrá ${g.letter}${gi + 1}` : `Skrá sett ${wi}`;
     const jl = !editing && justLogged && justLogged.ei === draft.cur && Date.now() - justLogged.at < 1100;
+    const lastWork = ex.sets.filter(st => st.type !== 'warm').slice(-1)[0] || prevSame;
+    kpLift = { sub: setLabel.replace(PENCIL, '').trim(), editing, btnLabel: editing ? 'Uppfæra sett' : btnLabel,
+      same: lastWork && num(lastWork.reps) ? String(num(lastWork.reps)) : '', last: prevSame && stype !== 'warm' ? setTxtFull(prevSame) : '' };
     body = `
       ${draft.plan ? `<div class="planbar"><span class="pill">${esc(draft.plan.name)}</span><span class="pill">${GOALS[draft.plan.goal] ? GOALS[draft.plan.goal].name : ''}</span></div>` : ''}
       <div class="exhead">
@@ -748,13 +754,13 @@ function renderLift(){
           <li class="dr cur"><span class="tg d">${dropping.drops.length + 2}</span><span>Drop ${dropping.drops.length + 1}</span><span class="tiny">${DROPI} léttara, engin hvíld</span></li></ul>` : ''}
         <div class="stepper">
           <button data-act="step" data-k="kg" data-d="-1" aria-label="Minnka þyngd">−</button>
-          <div class="val"><input data-cur="kg" inputmode="decimal" autocomplete="off" aria-label="Þyngd í kg" value="${esc(cur.kg)}" placeholder="0"><div class="u">kg</div></div>
+          <div class="val"><input data-cur="kg" data-kp="kg" data-kpid="c-kg" data-kpdock inputmode="${kpIm('decimal')}" autocomplete="off" aria-label="Þyngd í kg" value="${esc(cur.kg)}" placeholder="0"><div class="u">kg</div></div>
           <button data-act="step" data-k="kg" data-d="1" aria-label="Auka þyngd">+</button>
         </div>
         <div class="divider"></div>
         <div class="stepper">
           <button data-act="step" data-k="reps" data-d="-1" aria-label="Færri reps">−</button>
-          <div class="val"><input data-cur="reps" inputmode="numeric" autocomplete="off" aria-label="Endurtekningar" value="${esc(cur.reps)}" placeholder="0"><div class="u">reps</div></div>
+          <div class="val"><input data-cur="reps" data-kp="reps" data-kpid="c-reps" data-kpdock inputmode="${kpIm('numeric')}" autocomplete="off" aria-label="Endurtekningar" value="${esc(cur.reps)}" placeholder="0"><div class="u">reps</div></div>
           <button data-act="step" data-k="reps" data-d="1" aria-label="Fleiri reps">+</button>
         </div>
         ${editing ? `<button class="bigbtn" data-act="doneset">Uppfæra sett</button>`
@@ -1197,6 +1203,58 @@ function step(k, dir){
   ex.cur[k] = k === 'kg' ? fmtIn(nv) : String(nv);
   const inp = view.querySelector(`input[data-cur="${k}"]`); if (inp) inp.value = ex.cur[k];
   saveDraft();
+}
+
+/* ---------- Talnaborð appsins (keypad.js) ---------- */
+/* Lyklaborð símans opnast ekki í reitum talnaborðsins þegar það er virkt (inputmode="none") */
+function kpIm(mode){ return kp && kp.active() ? 'none' : mode; }
+const kgIncOf = v => settings.kgStep === 'auto' ? (v < 20 ? 1 : 2.5) : (parseFloat(settings.kgStep) || 2.5);
+function isBarbell(ex){
+  const m = ex && EXMETA[ex.exId];
+  return m ? m.eq === 'bar' : !!(ex && /st[öo]ng|stanga|barbell/i.test(ex.name || exName(ex.exId) || ''));
+}
+const barOf = ex => Number(settings.barEx[ex.exId] || settings.barKg) || 20;
+function kpExOf(inp){ return inp.dataset.cur ? curEx() : draft && (draft.exercises || [])[+inp.dataset.sei]; }
+function kpCtx(inp){
+  const d = inp.dataset, mode = d.kp, ex = kpExOf(inp);
+  const kgInput = d.cur ? view.querySelector('input[data-cur="kg"]') : view.querySelector(`input[data-sei="${d.sei}"][data-ssi="${d.ssi}"][data-sk="kg"]`);
+  let sub = '', same = '', last = '', done = { label: 'Næsta', aria: 'Næsti reitur' };
+  if (d.cur){ const L = kpLift || {}; sub = L.sub || ''; same = L.same || ''; last = L.last || '';
+    if (mode === 'reps') done = { label: L.editing ? 'Uppfæra' : 'Skrá', aria: L.btnLabel || 'Skrá sett' }; }
+  else if (ex){ sub = `Sett ${+d.ssi + 1}`; const prev = ex.sets[+d.ssi - 1]; same = prev && num(prev.reps) ? String(num(prev.reps)) : ''; }
+  if (mode === 'kg') done = { label: 'Næsta', aria: 'Næsta: endurtekningar' };
+  return { mode, title: mode === 'kg' ? 'Þyngd' : 'Endurtekningar', sub, exName: ex ? (ex.name || exName(ex.exId)) : '',
+    inc: mode === 'kg' ? kgIncOf(num(inp.value) || 0) : 1, done, same: mode === 'reps' ? same : '', last,
+    bar: ex && isBarbell(ex) ? barOf(ex) : null, plates: settings.plates, kgInput, kgVal: kgInput ? kgInput.value : '',
+    pair: d.cur ? { kg: kgInput, reps: view.querySelector('input[data-cur="reps"]') } : null, persistent: d.kpdock != null };
+}
+function kpAct(name, inp, arg){
+  const d = inp.dataset;
+  if (name === 'step'){
+    if (d.cur) return step(d.cur, arg);
+    const v = num(inp.value) || 0, inc = d.kp === 'kg' ? kgIncOf(v) : 1, nv = Math.max(0, Math.round((v + arg * inc) * 100) / 100);
+    inp.value = d.kp === 'kg' ? fmtIn(nv) : String(nv); inp.dispatchEvent(new Event('input', { bubbles: true })); return;
+  }
+  if (name === 'bar'){
+    const ex = kpExOf(inp); if (!ex) return;
+    const list = [20, 15, 10], nx = list[(list.indexOf(barOf(ex)) + 1) % list.length];
+    setSettingQuiet('barEx', { ...settings.barEx, [ex.exId]: String(nx) }); return;
+  }
+  if (name === 'next'){
+    if (d.kp === 'kg') return d.cur ? view.querySelector('input[data-cur="reps"]') : view.querySelector(`input[data-sei="${d.sei}"][data-ssi="${d.ssi}"][data-sk="reps"]`);
+    if (d.cur){ kp.retarget('c-kg'); doneSet(); return 'done'; }
+    return view.querySelector(`input[data-sei="${d.sei}"][data-ssi="${+d.ssi + 1}"][data-sk="kg"]`) || 'close';
+  }
+}
+function kpRest(){
+  if (!draft || !draft.lastSetAt || ui.tab !== 'log') return '';
+  const ms = Date.now() - draft.lastSetAt; return ms < 15 * 60000 ? fmtClock(ms) : '';
+}
+/* Stilling vistuð án þess að teikna skjáinn upp á nýtt (t.d. stöng valin á talnaborðinu) */
+function setSettingQuiet(key, value){
+  settings = normalize({ ...settings, [key]: value }); writeLocal(settings);
+  clearTimeout(setSaveT);
+  if (me && Store.saveSettings) setSaveT = setTimeout(() => Store.saveSettings(me.uid, settings).catch(e => console.warn(e)), 600);
 }
 
 /* Saga */
@@ -2627,7 +2685,7 @@ function commentCard(){
 }
 
 /* ---------- Ábendingar ---------- */
-const APP_VERSION = '2.1';
+const APP_VERSION = '3.7';
 const FB_TYPES = { idea: { name: 'Hugmynd', desc: 'Viðbót eða breyting sem væri gaman að sjá', ph: 'T.d. væri gott að geta…' },
   bug: { name: 'Villa', desc: 'Eitthvað virkar ekki eins og það á að gera', ph: 'Hvað gerðist, og hvað áttirðu von á?' },
   other: { name: 'Annað', desc: 'Hrós, spurning eða annað', ph: 'Skrifaðu hér…' } };
@@ -2772,8 +2830,8 @@ function strengthEditor(){
     ${exs.map((e, ei) => `<div class="stex"><div class="row-h"><b>${esc(e.name || exName(e.exId))}</b><button class="xbtn" data-act="strm" data-ei="${ei}" aria-label="Fjarlægja">${ICON.x}</button></div>
       ${(() => { const lp = lastPerformance(e.exId, draft.id, draft.profileId); return lp ? `<div class="tiny">Síðast: ${lp.sets.map(setTxt).join(', ')}</div>` : ''; })()}
       ${e.sets.map((st, si) => `<div class="strow"><span class="sn">${si + 1}</span>
-        <span class="unitwrap"><input class="in" data-sei="${ei}" data-ssi="${si}" data-sk="kg" inputmode="decimal" value="${esc(fmtIn(st.kg))}" aria-label="kg"><span class="unit">kg</span></span>
-        <span class="unitwrap"><input class="in" data-sei="${ei}" data-ssi="${si}" data-sk="reps" inputmode="numeric" value="${esc(st.reps ?? '')}" aria-label="reps"><span class="unit">reps</span></span>
+        <span class="unitwrap"><input class="in" data-sei="${ei}" data-ssi="${si}" data-sk="kg" data-kp="kg" data-kpid="s-${ei}-${si}-kg" inputmode="${kpIm('decimal')}" value="${esc(fmtIn(st.kg))}" aria-label="kg"><span class="unit">kg</span></span>
+        <span class="unitwrap"><input class="in" data-sei="${ei}" data-ssi="${si}" data-sk="reps" data-kp="reps" data-kpid="s-${ei}-${si}-reps" inputmode="${kpIm('numeric')}" value="${esc(st.reps ?? '')}" aria-label="reps"><span class="unit">reps</span></span>
         <button class="xbtn" data-act="strmset" data-ei="${ei}" data-si="${si}" aria-label="Eyða setti">${ICON.x}</button></div>`).join('')}
       <button class="addset" data-act="straddset" data-ei="${ei}">+ Sett</button></div>`).join('')}
     <button class="btn block" data-act="pickex">+ Bæta við lyftu</button>
@@ -3427,6 +3485,8 @@ function openSettings(){
 }
 function settingItem(it){
   const hint = it.hint ? `<div class="tiny">${it.hint}</div>` : '';
+  if (it.type === 'plates') return `<div class="sitem"><div class="slabel">${it.label}${hint}</div><div class="opts plateopts" role="group" aria-label="${it.label}">${PLATE_KG.map(p =>
+    `<button class="chip" data-plate="${p}" aria-pressed="${settings.plates.includes(p)}"><i class="pdot pc-${plateColor(p)}" aria-hidden="true"></i>${fmtIn(p)} kg</button>`).join('')}</div></div>`;
   if (it.type === 'toggle') return `<label class="srow"><span>${it.label}${hint}</span>
     <input type="checkbox" class="switch" data-settoggle="${it.key}" data-on="${it.on}" data-off="${it.off}" ${settings[it.key] === it.on ? 'checked' : ''}></label>`;
   if (it.type === 'number') return `<div class="srow"><label for="set_${it.key}" style="flex:1"><b style="font-weight:600">${it.label}</b>${hint}</label>
@@ -3526,6 +3586,7 @@ function renderSettings(){
 
     <div class="sec-h">Hjálp og ábendingar</div>
     <div class="glass sgroup">
+      <button class="srow fbrow" data-act="newsopen"><span class="fbic" aria-hidden="true">✨</span><span>Nýjungar í útgáfu ${NEWS}<div class="tiny">Talnaborð appsins og plötur á stöng</div></span>${ICON.r}</button>
       <button class="srow fbrow" data-act="fbopen" data-v="idea"><span class="fbic" aria-hidden="true">💡</span><span>Senda hugmynd<div class="tiny">Viðbót eða breyting sem væri gaman að sjá</div></span>${ICON.r}</button>
       <button class="srow fbrow" data-act="fbopen" data-v="bug"><span class="fbic" aria-hidden="true">🐞</span><span>Tilkynna villu<div class="tiny">Eitthvað virkar ekki eins og það á að gera</div></span>${ICON.r}</button>
       <button class="srow fbrow" data-act="fbopen" data-v="other"><span class="fbic" aria-hidden="true">💬</span><span>Annað<div class="tiny">Hrós, spurning eða annað</div></span>${ICON.r}</button>
@@ -3629,6 +3690,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 
 function tick(){
   if (!draft || gate !== 'app') return;
+  if (kp) kp.tick();
   const sEl = view.querySelector('[data-timer="session"]'); if (sEl && draft.startedAt) sEl.textContent = fmtClock(Date.now() - draft.startedAt);
   const rEl = view.querySelector('[data-timer="rest"]');
   if (rEl && draft.lastSetAt){ const ms = Date.now() - draft.lastSetAt, box = rEl.closest('[data-rest]');
@@ -3695,6 +3757,7 @@ function attach(){
     refreshSharedSubs(); scheduleSync();
     if (gate !== 'app'){ gate = 'app'; render();
       if (friendParam){ const c = friendParam; friendParam = null; clearParam('vinur'); setTimeout(() => openFriendInvite(c), 300); }
+      else setTimeout(maybeShowNews, 900);
     } else softRender();
   }, err => { console.error(err); if (gate !== 'app'){ gate = 'error'; gateMsg = 'Náði ekki í gögnin. Athugaðu netsambandið.'; render(); } else toast('Samstilling rofnaði'); });
 }
@@ -3755,6 +3818,9 @@ document.addEventListener('click', async e => {
   if (d.pm){ ui.progMode = d.pm; render(); return; }
   if (d.pt){ ui.progType = d.pt; render(); return; }
   if (d.set){ setSetting(d.set, d.val); return; }
+  if (d.plate){ const p = Number(d.plate), list = settings.plates.includes(p) ? settings.plates.filter(x => x !== p) : [...settings.plates, p];
+    if (!list.length) return toast('Veldu að minnsta kosti eina plötu');
+    setSetting('plates', list); return; }
   if (d.move){ const arr = settings.homeCards.slice(), i = arr.indexOf(d.move), j = i + (+d.dir);
     if (i >= 0 && j >= 0 && j < arr.length){ [arr[i], arr[j]] = [arr[j], arr[i]]; setSetting('homeCards', arr); } return; }
   if (d.fm){ ui.fMode = d.fm; render(); return; }
@@ -3970,6 +4036,8 @@ document.addEventListener('click', async e => {
       x.raw = String(Math.max(0, Math.round(v) + (+d.d)));
       const inp = view.querySelector(`[data-cd="${d.i}"]`); if (inp) inp.value = x.raw; saveDraft(); cardioLongUpdate(); break; }
     case 'kbhelp': openShortcuts(); break;
+    case 'newsopen': openNews(); break;
+    case 'newsok': closeSheet(); break;
     case 'cdpreopen': draft.cdPre = true; saveDraft(); render(); break;
     case 'cdfirst': closeSheet(); if (draft){ draft.cdPre = true; saveDraft(); } render(); window.scrollTo(0, 0); break;
     case 'seteffort': draft.effort = d.e || ''; saveDraft(); updatePace(); break;
@@ -4053,12 +4121,13 @@ document.addEventListener('submit', async e => {
 });
 /* Talnareitir (þyngd, endurtekningar, tími o.fl.): talan er valin þegar ýtt er á reitinn, svo ný tala skrifast beint yfir hana.
    Safari og sumir Android-vafrar afvelja aftur við mouseup rétt eftir focus, því er það stöðvað í stutta stund. */
-const isNumIn = t => t && t.tagName === 'INPUT' && /^(decimal|numeric)$/.test(t.getAttribute('inputmode') || '');
+const isNumIn = t => t && t.tagName === 'INPUT' && (!!t.dataset.kp || /^(decimal|numeric)$/.test(t.getAttribute('inputmode') || ''));
 let numFocusAt = 0;
 document.addEventListener('focusin', e => {
-  const t = e.target; if (!isNumIn(t) || !t.value) return;
+  const t = e.target; if (!isNumIn(t) || !t.value || (kp && kp.quiet)) return;
   numFocusAt = Date.now(); try { t.select(); } catch(_){}
-  setTimeout(() => { if (document.activeElement === t) try { t.setSelectionRange(0, t.value.length); } catch(_){ try { t.select(); } catch(__){} } }, 0);
+  const v0 = t.value;   /* ekki velja aftur ef búið er að slá inn (t.d. hratt á talnaborði appsins) */
+  setTimeout(() => { if (document.activeElement === t && t.value === v0) try { t.setSelectionRange(0, t.value.length); } catch(_){ try { t.select(); } catch(__){} } }, 0);
 });
 document.addEventListener('mouseup', e => { if (isNumIn(e.target) && Date.now() - numFocusAt < 400) e.preventDefault(); });
 document.addEventListener('input', e => {
@@ -4124,6 +4193,44 @@ function openShortcuts(){
   openSheet('Flýtilyklar', `<table class="kbtable"><tbody>${rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('')}</tbody></table>
     <p class="tiny" style="margin-top:12px">Flýtilyklarnir virka ekki á meðan skrifað er í reit, nema vistun.</p>`);
 }
+
+/* ---------- Nýtt í appinu ----------
+   Birtist einu sinni eftir uppfærslu hjá þeim sem hafa notað appið áður (ekki nýjum notendum).
+   Séð útgáfa vistast í stillingum notandans, svo kynningin kemur ekki aftur á öðru tæki. */
+const NEWS = '3.7';
+const NW_FOLD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/></svg>';
+const NW_GEAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
+function maybeShowNews(){
+  if (gate !== 'app' || !me || settings.news === NEWS) return;
+  if (sheetOpen() || document.querySelector('.celebrate')) return setTimeout(maybeShowNews, 4000);
+  const used = state.sessions.some(x => x.profileId === me.uid);
+  setSettingQuiet('news', NEWS);
+  if (used) openNews();
+}
+function openNews(){
+  const touch = !!(kp && kp.active());
+  const row = (ic, t, d) => `<li><span class="nwi" aria-hidden="true">${ic}</span><span><b>${t}</b><span class="tiny">${d}</span></span></li>`;
+  const keys = ['7', '8', '9', '−2,5', '4', '5', '6', '+2,5'].map((k, i) => `<i class="${i % 4 === 3 ? 'st' : ''}">${k}</i>`).join('');
+  openSheet('Nýtt í Æfingabókinni', `<div class="news">
+    <div class="nwhero" aria-hidden="true">${barHtml([20, 10, 2.5], 'big')}<div class="nwkeys">${keys}<i class="go">Næsta</i></div></div>
+    <p class="nwver">Útgáfa ${NEWS}</p>
+    <h3 class="nwh">Talnaborð appsins</h3>
+    <p class="nwlead">Þegar þú skráir þyngd og endurtekningar opnast nú talnaborð appsins í stað lyklaborðs símans. Það er alltaf eins, með kommu, og hylur ekki settin.</p>
+    <ul class="nwlist">
+      ${row('±', 'Skref, Næsta og Skrá', '−2,5 og +2,5 breyta þyngdinni. „Næsta“ fer úr þyngd í endurtekningar og „Skrá“ skráir settið. „Sama“ setur sama fjölda og í síðasta setti.')}
+      ${row(`<i class="pdot pc-red"></i>`, 'Plötur á stöng', 'Í æfingum með stöng sérðu hvaða plötur fara á hvora hlið, í litum platnanna. Ýttu á „Stöng 20 kg“ til að velja aðra stöng fyrir æfinguna.')}
+      ${row(NW_FOLD, 'Opinn Fold og Flex-hamur', 'Á opnum skjá situr talnaborðið til hliðar svo ekkert hylur settin. Hálfopinn á bekknum: settið efst og talnaborðið neðst.')}
+      ${row(NW_GEAR, 'Þú ræður', 'Í Stillingum undir Skráning velur þú plöturnar í ræktinni og þyngd stangar, eða slekkur á talnaborðinu.')}
+    </ul>
+    ${touch ? '' : '<p class="tiny nwnote">Talnaborðið birtist í símum og spjaldtölvum með snertiskjá.</p>'}
+    <button class="btn primary block nwok" data-act="newsok">Í lagi</button></div>`);
+}
+
+kp = createKeypad({
+  selector: 'input[data-kp]', wideQuery: '(min-width: 700px)',
+  enabled: () => gate === 'app' && settings.keypad !== 'off',
+  ctx: kpCtx, act: kpAct, rest: kpRest
+});
 
 /* ---------- Ræsing ---------- */
 if (!Store.configured){ gate = 'config'; render(); }

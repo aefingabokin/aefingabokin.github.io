@@ -1,10 +1,11 @@
-import re
+import os, re
 h = open('./index.html').read()
 settings = open('./js/settings.js').read().replace('export const ', 'const ').replace('export function ', 'function ')
 pools = open('./js/pools.js').read().replace('export const ', 'const ')
 coach = open('./js/coach.js').read().replace('export const ', 'const ').replace('export function ', 'function ')
 i18n = open('./js/i18n.js').read().replace('export const ', 'const ').replace('export function ', 'function ')
 importers = open('./js/importers.js').read().replace('export function ', 'function ').replace('export async function ', 'async function ')
+keypad = open('./js/keypad.js').read().replace('export const ', 'const ').replace('export function ', 'function ')
 ui = open('./js/ui.js').read()
 ui = re.sub(r"^import \{[^}]*\} from '\./[a-z0-9]+\.js';\n", '', ui, flags=re.M)
 ui = ui.replace('export function startApp(Store){', 'function startApp(Store){')
@@ -13,11 +14,16 @@ ui = ui.replace(anchor, "window.__demo = { gate: g => { closeSheet(); gate = g; 
 store = open('dev/demo_store.js').read(); nav = open('dev/demo_nav.js').read()
 h = re.sub(r'\s*<link rel="manifest"[^>]*>', '', h); h = re.sub(r'\s*<link rel="icon"[^>]*>', '', h); h = re.sub(r'\s*<link rel="apple-touch-icon"[^>]*>', '', h)
 h = h.replace('<script type="module" src="js/main.js"></script>', '')
-old = open('./dev/out/aefingabokin-synishorn.html').read()
-demo_css = re.search(r'/\* Sýnishorn \*/.*?(?=</style>)', old, re.S).group(0)
+# Sérstakt CSS sýnishornsins er sótt úr eldra úttaki ef það er til (annars ekkert)
+try:
+    m = re.search(r'/\* Sýnishorn \*/.*?(?=</style>)', open('./dev/out/aefingabokin-synishorn.html').read(), re.S)
+    demo_css = m.group(0) if m else ''
+except FileNotFoundError:
+    demo_css = ''
 h = h.replace('</style>', demo_css + '</style>', 1)
 boot = "window.__forceInstall = true;\nif (!localStorage.getItem(LS_KEY)) writeLocal(normalize({ sports: ['lift', 'run', 'hike', 'swim', 'golf', 'class', 'other'] }));\napplyAppearance(readLocal());\nstartApp(DemoStore);"
-h = h.replace('</body>', f'<script type="module">\n{settings}\n{pools}\n{coach}\n{i18n}\n{importers}\n{ui}\n{store}\n{boot}\n{nav}\nif (location.hash === \'#upphaf\') setTimeout(() => window.__demo && window.__demo.auth(\'start\'), 600);\n</script>\n</body>')
+h = h.replace('</body>', f'<script type="module">\n{settings}\n{pools}\n{coach}\n{i18n}\n{importers}\n{keypad}\n{ui}\n{store}\n{boot}\n{nav}\nif (location.hash === \'#upphaf\') setTimeout(() => window.__demo && window.__demo.auth(\'start\'), 600);\n</script>\n</body>')
 h = h.replace('<title>Æfingabókin</title>', '<title>Æfingabókin – sýnishorn</title>')
+os.makedirs('./dev/out', exist_ok=True)
 open('./dev/out/aefingabokin-synishorn.html', 'w').write(h)
 print('rebuilt', len(h))

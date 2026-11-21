@@ -25,8 +25,17 @@ export const DEFAULTS = {
   startTab: 'home',     // home | log
   maxHr: null,          // hámarkspúls, notaður til að meta álag hlaupa
   analytics: 'on',      // nafnlaus notkunartölfræði: on | off
+  keypad: 'on',         // talnaborð appsins í stað lyklaborðs símans (snertiskjáir): on | off
+  barKg: '20',          // þyngd stangar þegar plötur eru reiknaðar: 20 | 15 | 10
+  barEx: {},            // stöng fyrir einstakar æfingar, t.d. { 'Tvíhöfðakrulla með stöng': '10' }
+  plates: [25, 20, 15, 10, 5, 2.5, 2, 1.5, 1.25, 1, 0.5],   // plötur sem eru til í ræktinni (kg)
+  news: '',             // síðasta útgáfa sem notandinn hefur séð kynningu á („Nýtt í appinu“)
   sports: ['lift', 'run', 'walk', 'swim', 'bike', 'other']   // íþróttir sem birtast sem flísar við skráningu
 };
+
+/* Lyftingaplötur sem appið þekkir (sami listi og litakóðinn í keypad.js) og stangir */
+export const PLATE_KG = [25, 20, 15, 10, 5, 2.5, 2, 1.5, 1.25, 1, 0.5];
+export const BAR_KG = ['20', '15', '10'];
 
 export const SPORT_IDS = ['lift', 'run', 'walk', 'hike', 'swim', 'bike', 'ski', 'class', 'yoga', 'ball', 'racket', 'golf', 'row', 'climb', 'combat', 'dance', 'other'];
 
@@ -68,6 +77,10 @@ export const SCHEMA = {
   logging: [
     { key: 'kgStep', label: 'Þyngdarskref á + og −', hint: 'Sjálfvirkt: 1 kg undir 20 kg, annars 2,5 kg', type: 'choice',
       options: [['auto', 'Sjálfvirkt'], ['2.5', '2,5 kg'], ['1.25', '1,25 kg'], ['1', '1 kg'], ['0.5', '0,5 kg']] },
+    { key: 'keypad', label: 'Talnaborð appsins', hint: 'Opnast í stað lyklaborðs símans þegar þú skráir þyngd og endurtekningar. Á snertiskjáum.', type: 'toggle', on: 'on', off: 'off' },
+    { key: 'barKg', label: 'Þyngd stangar', hint: 'Notuð til að reikna plöturnar. Á talnaborðinu getur þú valið aðra stöng fyrir hverja æfingu.', type: 'choice',
+      options: [['20', '20 kg'], ['15', '15 kg'], ['10', '10 kg']] },
+    { key: 'plates', label: 'Plötur í ræktinni', hint: 'Talnaborðið notar aðeins þessar plötur þegar það sýnir hvað fer á stöngina.', type: 'plates' },
     { key: 'startTab', label: 'Appið opnast á', type: 'choice', options: [['home', 'Vikunni'], ['log', 'Skrá æfingu']] },
     { key: 'maxHr', label: 'Hámarkspúls', hint: 'Notaður til að meta álag hlaupa út frá meðalpúls. Ef tómt er hann áætlaður út frá aldri, annars miðað við hraða.', type: 'number', min: 120, max: 230, placeholder: 'slög/mín' }
   ]
@@ -89,6 +102,13 @@ export function normalize(s){
   if (!['is', 'en'].includes(o.lang)) o.lang = 'is';
   o.templates = (Array.isArray(o.templates) ? o.templates : []).filter(t => t && t.id && t.name && t.type).slice(0, 20);
   const hr = Number(o.maxHr); o.maxHr = hr >= 120 && hr <= 230 ? Math.round(hr) : null;
+  if (!['on', 'off'].includes(o.keypad)) o.keypad = 'on';
+  o.barKg = BAR_KG.includes(String(o.barKg)) ? String(o.barKg) : '20';
+  const be = o.barEx && typeof o.barEx === 'object' && !Array.isArray(o.barEx) ? o.barEx : {};
+  o.barEx = Object.fromEntries(Object.entries(be).filter(([k, v]) => k && k.length <= 80 && BAR_KG.includes(String(v))).slice(-80).map(([k, v]) => [k, String(v)]));
+  o.plates = Array.isArray(o.plates) ? PLATE_KG.filter(p => o.plates.map(Number).includes(p)) : DEFAULTS.plates.slice();
+  if (!o.plates.length) o.plates = DEFAULTS.plates.slice();
+  o.news = typeof o.news === 'string' ? o.news.slice(0, 12) : '';
   return o;
 }
 
