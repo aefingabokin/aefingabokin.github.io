@@ -134,7 +134,7 @@ function parseGpx(text, filename){
   const typeEl = doc.getElementsByTagName('type')[0], nameEl = doc.getElementsByTagName('name')[0];
   let m = typeEl ? mapActivity(typeEl.textContent) : null;
   const durationMin = t0 && t1 ? (t1.t - t0.t) / 60000 : null;
-  if (!m || m.type === 'other'){ const pace = durationMin && km ? durationMin / km : null; m = pace && pace < 8.5 ? { type: 'run' } : pace && pace < 4 ? { type: 'bike' } : { type: 'walk' }; }
+  if (!m || m.type === 'other'){ const pace = durationMin && km ? durationMin / km : null; m = pace && pace < 3.5 ? { type: 'bike' } : pace && pace < 8.5 ? { type: 'run' } : { type: 'walk' };   /* undir 3:30 mín/km (yfir 17 km/klst) er hjól */ }
   const start = t0 ? t0.t : new Date();
   const it = { ...m, date: ymdLocal(start), startISO: start.toISOString(), importKey: `gpx:${start.toISOString()}`, source: 'gpx',
     durationMin, elevation: gainOf(pts.map(p => p.ele)) || null, avgHr: null };

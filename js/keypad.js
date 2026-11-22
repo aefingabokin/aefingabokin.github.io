@@ -92,6 +92,9 @@ export function createKeypad(o){
     for (const n of [el, topEl]){
       n.addEventListener('pointerdown', onDown);
       n.addEventListener('mousedown', e => e.preventDefault());   /* fókusinn helst í reitnum */
+      /* Snerting: takkarnir eru afgreiddir í pointerdown. Án þessa lendir smellurinn sem vafrinn býr til þegar fingri er
+         lyft á því sem er undir talnaborðinu ef það lokaðist á meðan („Skrá“ og „Fela“ hoppuðu yfir á flipa í valmyndinni). */
+      n.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
       n.addEventListener('click', onClick);
     }
     ['pointerup', 'pointercancel', 'blur'].forEach(t => window.addEventListener(t, stopHold));

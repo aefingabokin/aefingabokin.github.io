@@ -1191,7 +1191,13 @@ export const I18N_EN = {
 "Á opnum skjá situr talnaborðið til hliðar svo ekkert hylur settin. Hálfopinn á bekknum: settið efst og talnaborðið neðst.": "On the open screen the number pad sits to the side so nothing covers your sets. Half-open on the bench: the set on top, the number pad below.",
 "Þú ræður": "Your choice",
 "Í Stillingum undir Skráning velur þú plöturnar í ræktinni og þyngd stangar, eða slekkur á talnaborðinu.": "In Settings under Logging you choose the plates at your gym and the bar weight, or turn the number pad off.",
-"Talnaborðið birtist í símum og spjaldtölvum með snertiskjá.": "The number pad appears on phones and tablets with a touch screen."
+"Talnaborðið birtist í símum og spjaldtölvum með snertiskjá.": "The number pad appears on phones and tablets with a touch screen.",
+"Þú ert með æfingu í gangi sem er ekki vistuð. Henda henni og halda áfram?": "You have a workout in progress that is not saved. Discard it and continue?",
+"Þessi skjár náði ekki að opnast. Æfingarnar þínar eru óhreyfðar.": "This screen could not open. Your workouts are untouched.",
+"Reyna aftur": "Try again",
+"Fara á forsíðu": "Go to home",
+"Henda æfingunni sem var í vinnslu": "Discard the workout in progress",
+"Henda æfingunni sem var í vinnslu?": "Discard the workout in progress?"
 };
 export const I18N_PAT = [["^Sett (\\d+)$", "Set $1"], ["^Skrá sett (\\d+)$", "Log set $1"], ["^Sett (\\d+) skráð$", "Set $1 logged"], ["^Breyta setti (\\d+)$", "Edit set $1"], ["^Breyta upphitunarsetti$", "Edit warm-up set"], ["^Upphitunarsett$", "Warm-up set"], ["^Sett (\\d+) · drop (\\d+)$", "Set $1 · drop $2"], ["^Skrá drop (\\d+)$", "Log drop $1"], ["^Drop (\\d+) skráð$", "Drop $1 logged"], ["^Æfing (\\d+) af (\\d+)$", "Exercise $1 of $2"], ["^Súpersett ([A-H]) · umferð (\\d+)$", "Superset $1 · round $2"], ["^Súpersett ([A-H])$", "Superset $1"], ["^Skrá ([A-H]\\d)$", "Log $1"], ["^Næst: (.+)$", "Next: $1"], ["^Síðast (.+)$", "Last $1"], ["^(\\d+) æfingar hjá ykkur$", "$1 workouts for you two"], ["^(\\d+) æfing hjá ykkur$", "$1 workout for you two"], ["^(\\d+) æfingar$", "$1 workouts"], ["^(\\d+) æfing$", "$1 workout"], ["^(\\d+) sett$", "$1 sets"], ["^Sett (\\d+) af (\\d+)$", "Set $1 of $2"], ["^Öll (\\d+) sett búin$", "All $1 sets done"], ["^Fyrir (\\d+) dögum$", "$1 days ago"], ["^(\\d+) af (\\d+) merkjum$", "$1 of $2 badges"], ["^Árið þitt (\\d+)$", "Your year $1"], ["^Árið mitt (\\d+)$", "My year $1"], ["^Hvíld (.+)$", "Rest $1"], ["^af (\\d+(?:[,.]\\d+)?) (mín|sek)$", "of $1 $2"], ["^(\\d+(?:[,.]\\d+)?) mín$", "$1 min"], ["^(\\d+(?:[,.]\\d+)?) sek$", "$1 sec"], ["^~(\\d+) mín$", "~$1 min"], ["^(\\d+) æfingar · ~(\\d+) mín$", "$1 exercises · ~$2 min"], ["^Skráð á (.+)$", "Logged for $1"], ["^Ljúka setti$", "Finish set"], ["^(\\d+) (þyngdir|þyngd)$", "$1 weights"], ["^Sett (\\d+)(.*)$", "Set $1$2"], ["^(\\d+) × (\\d+)–(\\d+) endurtekningar$", "$1 × $2–$3 reps"], ["^(\\d+) × (\\d+)–(\\d+)$", "$1 × $2–$3"], ["^endurtekningar$", "reps"], ["^(\\d+) dagar? með hreyfingu$", "$1 active days"], ["^(\\d+)% frá vikunni á undan$", "$1% vs. the week before"], ["^\\+(\\d+)% frá vikunni á undan$", "+$1% vs. the week before"], ["^Sama og síðast: (.+)$", "Same as last time: $1"], ["^Endurtaka síðast: (.+)$", "Repeat last: $1"], ["^(\\d+) / (\\d+)$", "$1 / $2"], ["^Mín (\\d+)$", "Min $1"], ["^Í dag$", "Today"], ["^Fyrir (\\d+) d\\.$", "$1 d ago"], ["^Síðasta vika í hnotskurn$", "Last week in a nutshell"]].map(([p, r]) => [new RegExp(p), r]);
 
@@ -1199,6 +1205,10 @@ let i18nOn = false, i18nObs = null;
 const I18N_SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'INPUT', 'CODE']);
 /* Setningar með nöfnum eða tölum inni í: þýddar með föllum */
 const I18N_FN = [
+  [/^Fjarlægja (.+) og (\d+) skráð sett\?$/, (m, a, b) => `Remove ${I18N_EN[a] || a} and ${b} logged ${b === '1' ? 'set' : 'sets'}?`],
+  [/^(.+) deilir ekki þessari æfingu, svo hrósið kemst ekki til skila$/, (m, a) => `${a} is not sharing this workout, so the kudos cannot be delivered`],
+  [/^(\d+) æfingar lesnar inn, (\d+) gölluðum sleppt$/, (m, a, b) => `${a} workouts imported, ${b} invalid skipped`],
+  [/^(km|m|Mínútur|Metrar|Kílómetrar) á viku$/, (m, a) => `${({ 'Mínútur': 'Minutes', 'Metrar': 'Metres', 'Kílómetrar': 'Kilometres' })[a] || a} per week`],
   [/^Minnka um (.+)$/, (m, a) => `Decrease by ${a.replace(',', '.')}`],
   [/^Auka um (.+)$/, (m, a) => `Increase by ${a.replace(',', '.')}`],
   [/^Sama og síðast, (\d+)$/, (m, a) => `Same as last set, ${a}`],
@@ -1259,6 +1269,8 @@ function i18nNode(n){
   let c; while ((c = w.nextNode())){ if (c.nodeType === 1){ for (const a of ['placeholder', 'aria-label', 'title', 'alt']){ const v = c.getAttribute(a); if (v){ const t = i18nText(v); if (t !== v) c.setAttribute(a, t); } } }
     else { const p = c.parentNode; if (p && I18N_SKIP.has(p.nodeName)) continue; const v = i18nText(c.nodeValue); if (v !== c.nodeValue) c.nodeValue = v; } }
 }
+/* Þýðir stakan texta sem fer ekki um síðuna (t.d. staðfestingarglugga vafrans) */
+export const i18nTr = s => i18nOn ? i18nText(String(s)) : s;
 /* Kveikir eða slekkur á ensku. Fylgist með öllum breytingum á síðunni og þýðir nýjan texta jafnóðum. */
 export function setLangActive(v){
   i18nOn = !!v;

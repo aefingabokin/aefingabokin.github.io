@@ -22,7 +22,7 @@ const DSHORT = ['sun', 'mán', 'þri', 'mið', 'fim', 'fös', 'lau'];
 const DPL = ['sunnudögum', 'mánudögum', 'þriðjudögum', 'miðvikudögum', 'fimmtudögum', 'föstudögum', 'laugardögum'];
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const nf = (n, d = 0) => { try { return new Intl.NumberFormat('is-IS', { maximumFractionDigits: d }).format(n || 0); } catch(e){ return String(Math.round((n || 0) * 10 ** d) / 10 ** d); } };
+const nf = (n, d = 0) => { try { return new Intl.NumberFormat(['is-IS', 'da-DK'], { maximumFractionDigits: d }).format(n || 0); } catch(e){ return String(Math.round((n || 0) * 10 ** d) / 10 ** d); } };
 const pct = (a, b) => b ? `${nf(a / b * 100, a / b < 0.1 ? 1 : 0)}%` : '–';
 const pad = n => String(n).padStart(2, '0');
 const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;

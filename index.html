@@ -8,9 +8,9 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" crossorigin>
 <style>
 :root{
   --ink:#0E1B2C; --ink-2:rgba(14,27,44,.76); --ink-3:rgba(14,27,44,.62);
@@ -1282,6 +1282,93 @@ body.kp-flex .tabs{visibility:hidden}
 .nwi .pdot{width:16px;height:16px}
 .nwnote{margin:14px 0 0}
 .nwok{margin-top:18px}
+/* ---------- Hreyfing (3.8) ----------
+   Stuttar og hljóðlátar hreyfingar sem skýra hvað gerðist: gluggar renna upp, nýr skjár rís inn, sleðinn í valmyndinni
+   fylgir flipanum og hnappar svara snertingu. Allt slokknar með „minnka hreyfingu“ í stýrikerfinu (neðst í kaflanum). */
+:root{--e-out:cubic-bezier(.22,.8,.24,1);--e-io:cubic-bezier(.4,0,.2,1);--e-in:cubic-bezier(.5,0,.85,.35);--e-spring:cubic-bezier(.3,1.4,.5,1)}
+button, a, summary, label, input, select, textarea{-webkit-tap-highlight-color:transparent}
+@keyframes fadein{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}}
+@keyframes cpop{from{opacity:0;transform:scale(.82)}}
+@keyframes ringin{from{stroke-dasharray:0 999}}
+@keyframes growx{from{transform:scaleX(0)}}
+@keyframes wkn{from{opacity:0;transform:translateX(22px)}}
+@keyframes wkp{from{opacity:0;transform:translateX(-22px)}}
+@keyframes dropin{from{opacity:0;transform:translateY(-10px)}}
+@keyframes bootbar{0%,55%,100%{transform:scaleY(1)}28%{transform:scaleY(.5)}}
+
+/* Snerting: hnappar gefa aðeins eftir þegar ýtt er á þá */
+.btn, .bigbtn, .chip, .roundbtn, .cta, .gbtn, .ebtn, .type, .plancard, .kcard, .seg button, .who button, .langsw{
+  transition:transform .14s var(--e-io), background-color .2s var(--e-io), color .2s var(--e-io), border-color .2s var(--e-io), box-shadow .2s var(--e-io), opacity .2s}
+.btn:not(:disabled):active, .chip:active, .roundbtn:active, .seg button:active, .who button:active, .langsw:active{transform:scale(.95)}
+.bigbtn:not(:disabled):active, .cta:not(:disabled):active, .gbtn:not(:disabled):active, .ebtn:not(:disabled):active, .type:active, .plancard:active, button.kcard:active{transform:scale(.975)}
+.item:active, .pick button:active{background-color:var(--hov)}
+
+/* Gluggar: renna upp að neðan og niður aftur, bakgrunnurinn dofnar inn. Haldið í handfangið og dregið niður til að loka. */
+.sheet-bg{display:block;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease, visibility 0s linear .22s}
+.sheet-bg.open{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .24s ease, visibility 0s}
+.sheet{display:flex;visibility:hidden;translate:0 104%;transition:translate .22s var(--e-in), visibility 0s linear .22s}
+.sheet.open{visibility:visible;translate:0 0;transition:translate .36s var(--e-out), visibility 0s}
+.sheet.drag{transition:none}
+.grab, .sheet-h{touch-action:none}
+.sheet:focus, .sheet:focus-visible{outline:none}   /* glugginn fær fókus þegar hann opnast; hringurinn á heima á hnöppunum inni í honum */
+@media (min-width: 700px){
+  .sheet{translate:0 20px;opacity:0;transition:translate .18s var(--e-in), opacity .18s ease, visibility 0s linear .18s}
+  .sheet.open{opacity:1;transition:translate .32s var(--e-out), opacity .2s ease, visibility 0s}
+}
+
+/* Tilkynningar */
+.toast{translate:0 12px;transition:opacity .2s ease, translate .32s var(--e-out)}
+.toast.show{translate:0 0}
+.netbar.show{animation:dropin .32s var(--e-out)}
+.celebrate{animation:fadein .22s ease}
+.cbox{animation:cpop .5s var(--e-spring) backwards}
+.ctrophy{animation:cpop .6s var(--e-spring) .14s backwards}
+
+/* Nýr skjár (flipi, innskráning → app): spjöldin rísa inn hvert á eftir öðru. Aðeins þegar skipt er um skjá, ekki við hverja teikningu.
+   `--fxd` (sett í `viewFx` í ui.js) er neikvæð töf þegar teiknað er upp á nýtt í miðri hreyfingu, svo hún heldur áfram en byrjar ekki aftur. */
+#view.enter > :not(.boot):not(.lsplit):not(.homegrid), #view.enter .hmain > *, #view.enter .hside > *, #view.enter .lmain > *, #view.enter .lside > *{animation:rise .42s var(--e-out) var(--fxd, 0s) backwards}
+#view.enter > :nth-child(2), #view.enter .hmain > :nth-child(2), #view.enter .hside > :nth-child(2), #view.enter .lmain > :nth-child(2){animation-delay:calc(var(--fxd, 0s) + .04s)}
+#view.enter > :nth-child(3), #view.enter .hmain > :nth-child(3), #view.enter .hside > :nth-child(3), #view.enter .lmain > :nth-child(3){animation-delay:calc(var(--fxd, 0s) + .08s)}
+#view.enter > :nth-child(4), #view.enter .hmain > :nth-child(4), #view.enter .hside > :nth-child(4), #view.enter .lmain > :nth-child(4){animation-delay:calc(var(--fxd, 0s) + .12s)}
+#view.enter > :nth-child(5), #view.enter .hmain > :nth-child(5), #view.enter .hside > :nth-child(5), #view.enter .lmain > :nth-child(5){animation-delay:calc(var(--fxd, 0s) + .16s)}
+#view.enter > :nth-child(6), #view.enter .hmain > :nth-child(6), #view.enter .hside > :nth-child(6), #view.enter .lmain > :nth-child(6){animation-delay:calc(var(--fxd, 0s) + .2s)}
+#view.enter > :nth-child(n+7), #view.enter .hmain > :nth-child(n+7), #view.enter .hside > :nth-child(n+7), #view.enter .lmain > :nth-child(n+7), #view.enter .lside > *{animation-delay:calc(var(--fxd, 0s) + .24s)}
+/* Skipt um prófíl: sama síða, annað fólk → stutt dofnun */
+#view.swap > *{animation:fadein .26s ease var(--fxd, 0s) backwards}
+/* Hringir og súlur fyllast þegar skjárinn opnast */
+#view.enter .ring circle + circle, #view.enter .wc-rings .arc{animation:ringin 1s var(--e-out) calc(var(--fxd, 0s) + .2s) backwards}
+#view.enter .mbar i{transform-origin:0 50%;animation:growx .7s var(--e-out) calc(var(--fxd, 0s) + .22s) backwards}
+/* Vika fram og til baka */
+#view.wkn .week-grid{animation:wkn .3s var(--e-out) var(--fxd, 0s) backwards}
+#view.wkp .week-grid{animation:wkp .3s var(--e-out) var(--fxd, 0s) backwards}
+
+/* Valmyndin: sleði sem fylgir völdum flipa (staðsettur í `tabInd` í ui.js). Án skrifta heldur flipinn sínum bakgrunni. */
+.tabs button{position:relative;z-index:1;transition:color .3s var(--e-io), background-color .22s var(--e-io)}
+.tabs::before{content:"";position:absolute;left:0;top:0;width:var(--ti-w, 0);height:var(--ti-h, 0);transform:translate(var(--ti-x, 0), var(--ti-y, 0));border-radius:28px;background:var(--solid);opacity:0;pointer-events:none}
+.tabs.ind::before{opacity:var(--ti-o, 0);transition:transform .38s var(--e-out), width .38s var(--e-out), height .38s var(--e-out), opacity .2s ease}
+.tabs.ind button[aria-current="page"]:not(.tab-log){background-color:transparent}
+.tabs button > svg, .tabs button.tab-log .plus{transition:transform .28s var(--e-spring), box-shadow .25s var(--e-io)}
+.tabs button:active > svg{transform:scale(.86)}
+.tabs button.tab-log:active .plus{transform:scale(.92)}
+.tabs button.tab-log .plus svg{transition:transform .45s var(--e-spring)}
+.tabs button.tab-log[aria-current="page"] .plus svg{transform:rotate(90deg)}
+
+/* Hleðsluskjár: merkið með súlum sem anda */
+.gate.boot{display:grid;justify-items:center;gap:16px;margin-top:26vh;padding:0;animation:fadein .4s ease .12s backwards}
+.bootlogo{width:84px;height:84px;border-radius:20px;box-shadow:0 12px 32px rgba(4,12,24,.28)}
+.bootlogo .bb{transform-box:fill-box;transform-origin:50% 100%;animation:bootbar 1.25s var(--e-io) infinite}
+.gate.boot p{margin:0;font-size:14px;font-weight:600;color:var(--ink-3)}
+
+@media (prefers-reduced-motion: reduce){
+  .btn, .bigbtn, .chip, .roundbtn, .cta, .gbtn, .ebtn, .type, .plancard, .kcard, .seg button, .who button, .langsw, .tabs button, .tabs button > svg,
+  .tabs button.tab-log .plus, .tabs button.tab-log .plus svg, .tabs.ind::before, .sheet, .sheet.open, .sheet-bg, .sheet-bg.open, .toast{transition:none}
+  .btn:active, .chip:active, .roundbtn:active, .seg button:active, .who button:active, .langsw:active, .bigbtn:active, .cta:active, .gbtn:active, .ebtn:active,
+  .type:active, .plancard:active, button.kcard:active, .tabs button:active > svg, .tabs button.tab-log:active .plus{transform:none}
+  .tabs button.tab-log[aria-current="page"] .plus svg{transform:none}
+  .toast{translate:0 0}
+  .netbar.show, .celebrate, .cbox, .ctrophy, .gate.boot, .bootlogo .bb, #view.enter *, #view.swap > *, #view.wkn .week-grid, #view.wkp .week-grid{animation:none}
+}
 </style>
 </head>
 <body data-gate="loading">
@@ -1295,7 +1382,7 @@ body.kp-flex .tabs{visibility:hidden}
   </div>
 </header>
 
-<main id="view" class="wrap"><div class="gate"><p style="text-align:center">Hleð…</p></div></main>
+<main id="view" class="wrap"><div class="gate boot" role="status"><svg class="bootlogo" viewBox="0 0 240 240" aria-hidden="true"><rect width="240" height="240" fill="#0B1F33"/><rect class="bb" x="50" y="128" width="15" height="22" rx="7.5" fill="#6FA8DC" opacity="0.45" style="animation-delay:0.00s"/><rect class="bb" x="72" y="114" width="15" height="36" rx="7.5" fill="#6FA8DC" opacity="0.53" style="animation-delay:0.09s"/><rect class="bb" x="94" y="120" width="15" height="30" rx="7.5" fill="#6FA8DC" opacity="0.61" style="animation-delay:0.18s"/><rect class="bb" x="116" y="98" width="15" height="52" rx="7.5" fill="#6FA8DC" opacity="0.69" style="animation-delay:0.27s"/><rect class="bb" x="138" y="104" width="15" height="46" rx="7.5" fill="#6FA8DC" opacity="0.77" style="animation-delay:0.36s"/><rect class="bb" x="160" y="78" width="15" height="72" rx="7.5" fill="#6FA8DC" opacity="0.85" style="animation-delay:0.45s"/><rect class="bb" x="182" y="46" width="15" height="104" rx="7.5" fill="#B8F25A" style="animation-delay:0.54s"/><path d="M34 166 Q78 154 120 170 V194 Q78 180 34 192 Z" fill="#FFFFFF"/><path d="M206 166 Q162 154 120 170 V194 Q162 180 206 192 Z" fill="#E3EEF8"/></svg><p>Hleð…</p></div></main>
 
 <nav class="tabs glass" aria-label="Valmynd">
   <button data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Vikan</button>

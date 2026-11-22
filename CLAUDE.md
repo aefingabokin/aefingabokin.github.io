@@ -30,7 +30,44 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.7.1, CACHE v64)
+## Staða (útgáfa 3.8, CACHE v65)
+3.8: yfirferð á fagmennsku, hreyfing og talnasnið.
+- Hreyfing (kaflinn „Hreyfing (3.8)“ neðst í stílunum, breytur `--e-out`, `--e-io`, `--e-in`, `--e-spring`): gluggar renna
+  upp/niður og bakgrunnur dofnar (`.sheet` er nú alltaf `display:flex`, falinn með `visibility` + `translate`); dregið niður
+  í handfangi/fyrirsögn lokar glugga; nýr skjár rís inn spjald fyrir spjald og hringir/súlur fyllast; sleði í valmyndinni
+  fylgir völdum flipa (`tabInd` setur `--ti-x/y/w/h/o` á `.tabs`, `.tabs.ind::before` teiknar); hnappar gefa eftir við snertingu;
+  tilkynning rennur upp; hleðsluskjár með merkinu (`.gate.boot` í `index.html`, geymt í `BOOT_HTML`).
+- `viewFx(key)` í `render()` ræður hreyfingu skjásins: `enter` þegar lykillinn (gátt/flipi) breytist, annars `nextFx`
+  (`swap` við prófílskipti, `wkn`/`wkp` við vikuskipti). Venjuleg endurteikning í miðri hreyfingu setur `--fxd` (neikvæð töf)
+  svo hreyfingin heldur áfram í stað þess að byrja aftur. Ný hreyfing á skjá: bæta klasa í `FX` og reglu undir `#view.<klasi>`.
+- Umbúðir með `display:contents` (`.hmain`, `.hside`, `.lsplit`, `.lmain`, `.lside`) hreyfast ekki sjálfar; reglurnar miða á börnin.
+- Allt slokknar með „minnka hreyfingu“ (`prefers-reduced-motion`, neðst í kaflanum). Nýjar hreyfingar fara líka þangað.
+- Talnasnið: Chrome/Android hefur ekki `is-IS` í `Intl.NumberFormat` og féll í enskt snið („97.5 kg“, „1,000 m“).
+  `numLocale` velur nú danskt snið (eins og íslenskt: „97,5“, „1.000“) þegar íslenska vantar. Allar tölur fara um `nf`.
+- Þjónustuskráin (`sw.js`): eigin skrár bíða mest `NET_WAIT` (3 s) eftir netinu, annars afrit (áður hékk appið í lélegu
+  sambandi). Ef síðan sjálf kom úr afriti koma skrárnar hennar líka úr afriti (`cacheModeUntil`) svo útgáfur blandist ekki.
+  Aðeins heil svör fara í afrit. Firebase-kóði og letur (fest) flytjast milli útgáfa í `activate`.
+- Lagfæringar úr villuleit (sjálfstæð yfirferð á öllum kóðanum):
+  - Talnaborð: `touchstart` + `preventDefault` á talnaborðinu. Áður lenti smellurinn eftir „Skrá“/„Fela“ á flipanum undir.
+  - Æfing í gangi: `okToDrop()` spyr áður en önnur æfing er opnuð í hennar stað (`startDraft`, `d.edit`, `openDay`, `logday`,
+    `buildFromSetup`). Aðeins ný drög með gögnum; breytingar á eldri æfingu sem er lokað með ✕ tapast enn án spurningar.
+  - `draft.dropOf` er hreinsað þegar skipt er um eða fjarlægð æfing (`rmex`, `addExercise`, `ssPair`); `rmex` spyr ef sett eru skráð.
+  - `renderCrash`: `try/catch` utan um teikningu flipa. Skjár sem hrynur sýnir skýringu, „Reyna aftur“ og „Henda æfingunni sem
+    var í vinnslu“. Villan fer áfram sem `error`-atburður á `window` (prófanir sjá hana).
+  - `progOf` → `cleanProg`: framvinda markmiða annarra er hreinsuð (áður fór `streak` óvarið í HTML).
+  - `saveLog` heldur reitum sem skjárinn sér ekki um (`source`, `importKey`, `avgHr` á lyftingum o.fl.) og vistar `reps`/`rest`
+    í `t`. Íþróttaval í skráningu heitir nú `setsport` (tvö `case 'settype'` rákust á).
+  - `flashLogged` teiknar ekki allt upp á nýtt ef verið er að skrifa í reit (tók fókusinn og lokaði talnaborðinu).
+  - `snapStep`: skref á þyngd lenda á margfeldi af skrefinu. Þyngd sýnd með tveimur aukastöfum (1,25 kg plötur).
+  - Hrós á ódeilda æfingu maka býr ekki lengur til yfirlit sem vinir sjá; `putShared` skrifar ekki `kudos: {}` (þurrkaði út hrós).
+  - Innlestur afrits sleppir gölluðum æfingum. `confirm` er þýtt (`i18nTr`). Æfing skráð á eldri dag fær ekki klukku.
+- Ekki lagað, bíður ákvörðunar: afrit (JSON) endurheimtir ekki mælingar og markmið; nöfn eigin æfinga og lauga fara í
+  nafnlausu tölfræðina (`bump('custom', …)`, `t.pools`); hrós maka á ódeildar æfingar þyrfti að geymast á æfingunni sjálfri;
+  óvistaðar breytingar á eldri æfingu tapast við ✕; `celebrate` vantar fókus og Escape.
+- Prófanir: 35 af 38 standast (`dev/test-motion.mjs` og `dev/test-fixes.mjs` ný; sömu þrjár vantar prófunargögn).
+  Hreyfingar og snertingu verður að skoða í alvöru Chrome (`playwright-core` með `hasTouch`, snerting um CDP
+  `Input.dispatchTouchEvent`); innbyggði vafrinn í Claude frystir hreyfingar þegar hann er í bakgrunni.
+
 3.7.1: eftir skráð sett byrjar næsta sett á sömu tölum og voru skráðar (`keptCur`; í æfingaplani sama þyngd og reps
 samkvæmt plani). Áður var tekið sett frá síðustu æfingu eftir númeri og upphitunarsett talin með, sem gaf ranga þyngd
 (t.d. 17,5 kg). `suggestion` telur nú aðeins vinnusett. Breyting á eldra setti (og hætt við) skilar tölunum sem voru í

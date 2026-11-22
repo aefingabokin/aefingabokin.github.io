@@ -189,8 +189,10 @@ export async function createFirebaseStore(){
       const q = sinceDate ? F.query(col, F.where('date', '>=', sinceDate)) : col;
       return F.onSnapshot(q, s => cb(s.docs.map(d => ({ ...d.data(), id: d.id }))), onError);
     },
-    putShared(uid, data, isNew){
-      return F.setDoc(F.doc(db, 'users', uid, 'shared', data.id), isNew ? { ...data, kudos: {} } : data, { merge: true });
+    /* Aldrei `kudos: {}` hér: tómt kort í merge-skrifi kemur í stað reitsins og þurrkaði út hrós sem var komið
+       (t.d. þegar eldri æfingu maka var breytt). Lesendur nota `kudos || {}` og reglurnar `get('kudos', {})`. */
+    putShared(uid, data){
+      return F.setDoc(F.doc(db, 'users', uid, 'shared', data.id), data, { merge: true });
     },
     deleteShared(uid, id){ return F.deleteDoc(F.doc(db, 'users', uid, 'shared', id)); },
     setKudos(ownerUid, sid, fromUid, name){
