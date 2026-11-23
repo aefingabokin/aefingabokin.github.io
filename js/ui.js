@@ -268,7 +268,11 @@ function spaTotals(list){
     if (!t){ t = { kind: x.kind, min: 0, n: 0 }; out.push(t); } t.min = Math.round((t.min + x.min) * 100) / 100; t.n++; });
   return out;
 }
-const spaPills = totals => (totals = (totals || []).filter(t => t && SPA[t.kind])).length ? `<div class="spa">${totals.map(t => `<span class="sp"><i style="background:${SPA[t.kind].color}"></i>${SPA[t.kind].short} ${spaTime(t.min)}${t.n > 1 ? ` <small>${t.n}×</small>` : ''}</span>`).join('')}</div>` : '';
+/* Teygjur eftir æfingu (3.10): s.stretch = { min } (min null ef tíminn var ekki skráður). Birtast fremst með gufu og pottum. */
+const STRETCH_C = 'var(--c-yoga)';
+const stretchTxt = st => `Teygjur${st && st.min > 0 ? ` ${spaTime(st.min)}` : ''}`;
+const spaPills = (totals, st) => { totals = (totals || []).filter(t => t && SPA[t.kind]); if (!totals.length && !st) return '';
+  return `<div class="spa">${st ? `<span class="sp"><i style="background:${STRETCH_C}"></i>${stretchTxt(st)}</span>` : ''}${totals.map(t => `<span class="sp"><i style="background:${SPA[t.kind].color}"></i>${SPA[t.kind].short} ${spaTime(t.min)}${t.n > 1 ? ` <small>${t.n}×</small>` : ''}</span>`).join('')}</div>`; };
 /* Þrektæki í lyftingaæfingu: upphitun á undan og niðurlag á eftir. Hluti af æfingunni, telst ekki sem sér æfing
    og ekki í sett, magn eða met. Vistað sem s.cardio = [{ when: 'pre' | 'post', machine, min, dist?, kcal? }]. */
 const MACHINES = {
@@ -779,7 +783,7 @@ function kudosCard(){
 function itemHtml(s){
   const m = summary(s);
   return `<li><button class="item" data-edit="${esc(s.id)}"><span class="bar" style="background:${tc(TYPES[s.type] ? s.type : 'other')}"></span>
-    <span><div class="t">${esc(m.title)}${effPill(effortOf(s))}${pbPill(s)}</div><div class="s">${esc(m.sub)}</div>${cardioPills(s.cardio)}${spaPills(spaTotals(s.spa))}${m.extra ? `<div class="tiny">${esc(m.extra)}</div>` : ''}</span>
+    <span><div class="t">${esc(m.title)}${effPill(effortOf(s))}${pbPill(s)}</div><div class="s">${esc(m.sub)}</div>${cardioPills(s.cardio)}${spaPills(spaTotals(s.spa), s.stretch)}${m.extra ? `<div class="tiny">${esc(m.extra)}</div>` : ''}</span>
     <span class="d"><span class="edhint" aria-hidden="true">${PENCIL}</span>${fmtDate(s.date)}${ui.histBoth && ui.tab === 'history' ? `<br>${esc(pname(s.profileId))}` : ''}${(() => { const b = kudosBadge(kudosOf(s.profileId, s.id)); return b ? `<br>${b}` : ''; })()}</span></button></li>`;
 }
 
@@ -1136,6 +1140,35 @@ function renderCardio(){
     </div></div>`;
   updatePace();
 }
+/* ---------- Teygjur eftir æfingar: hlutfall ---------- */
+/* Telst með: æfingar sem buðu upp á teygjur. Ekki jóga (er teygjur), ekki ferð í laugina án sunds, og ekki æfingar
+   lesnar inn úr úri nema teygjur hafi verið skráðar á þær (þær eru sjaldan opnaðar, svo hlutfallið yrði villandi). */
+const stretchable = s => s.type !== 'yoga' && !(s.type === 'swim' && !s.distance && !s.durationMin) && (!s.source || !!s.stretch);
+function stretchStats(pid, type){
+  const now = new Date(), t = today(), from = ymd(addDays(now, -27)), prevFrom = ymd(addDays(now, -55));
+  const all = mySessions(pid).filter(x => stretchable(x) && x.date <= t), pool = type ? all.filter(x => x.type === type) : all;
+  const share = l => ({ n: l.length, k: l.filter(x => x.stretch).length, pct: l.length ? l.filter(x => x.stretch).length / l.length : null });
+  const ws = weekStart(now);
+  const weeks = [...Array(8)].map((_, i) => { const a = addDays(ws, (i - 7) * 7), b = ymd(addDays(a, 6)); return share(pool.filter(x => x.date >= ymd(a) && x.date <= b)); });
+  const mins = pool.filter(x => x.date >= from && x.stretch && x.stretch.min > 0).map(x => x.stretch.min);
+  return { ever: pool.some(x => x.stretch), cur: share(pool.filter(x => x.date >= from)), prev: share(pool.filter(x => x.date >= prevFrom && x.date < from)),
+    all: share(all.filter(x => x.date >= from)), weeks, avgMin: mins.length ? mins.reduce((a, v) => a + v, 0) / mins.length : null };
+}
+const pctTxt = p => `${Math.round(p * 100)}%`;
+function stretchCard(type){
+  const st = stretchStats(state.active, type); if (!st.ever || !st.cur.n) return '';
+  const c = st.cur, d = st.prev.pct != null ? Math.round((c.pct - st.prev.pct) * 100) : null;
+  const trend = d == null || !st.prev.n ? '' : d > 0 ? `<em class="up">+${d} prósentustig frá fyrri 4 vikum</em>` : d < 0 ? `<em class="down">${d} prósentustig frá fyrri 4 vikum</em>` : '<em>Sama og fyrri 4 vikur</em>';
+  const bars = st.weeks.map((w, i) => `<span class="stb${w.n ? '' : ' none'}" title="${w.n ? `${w.k} af ${w.n}` : 'Engin æfing'}"><i style="height:${w.n ? (w.pct ? Math.max(8, Math.round(w.pct * 100)) : 0) : 0}%"></i></span>`).join('');
+  const extra = [type && st.all.n && st.all.n !== c.n ? `Allar æfingar: ${pctTxt(st.all.pct)}` : '', st.avgMin ? `Að meðaltali ${spaTime(Math.round(st.avgMin))}` : ''].filter(Boolean).join(' · ');
+  return `<section class="glass stcard" aria-label="Teygjur eftir æfingar">
+      <div class="sthead">${ring(c.pct, 66, STRETCH_C, pctTxt(c.pct))}
+        <div><b>Teygjur eftir æfingar</b><div class="tiny">Teygðir eftir ${c.k} af ${c.n} ${plural(c.n, 'æfingu', 'æfingum')} síðustu 4 vikur</div>${trend ? `<div class="tiny sttrend">${trend}</div>` : ''}</div></div>
+      <div class="stbars" aria-hidden="true">${bars}</div>
+      <div class="stfoot tiny"><span>8 vikur</span><span>Þessi vika</span></div>
+      ${extra ? `<div class="tiny stx">${extra}</div>` : ''}
+    </section>`;
+}
 function spaStats(){
   const since = ymd(addDays(new Date(), -28)), list = mySessions().filter(s => s.date >= since && (s.spa || []).length);
   if (!list.length) return '';
@@ -1143,14 +1176,23 @@ function spaStats(){
   return `<div class="glass" style="grid-column:span 2"><div class="l" style="margin-bottom:6px">Gufa og pottar síðustu 4 vikur, ${visits} ${plural(visits, 'ferð', 'ferðir')}</div>
     ${t.map(x => `<div class="spastat"><span><i style="background:${SPA[x.kind].color}"></i>${SPA[x.kind].name}</span><b>${spaTime(x.min)}</b><span class="tiny">${x.n} ${plural(x.n, 'skipti', 'skipti')}</span></div>`).join('')}</div>`;
 }
+const canStretch = () => draft && draft.type !== 'yoga';   /* jóga og teygjur eru sjálf teygjur */
 function spaEditor(){
-  const list = draft.spa || [], open = draft.type === 'swim' || list.length || draft.spaOpen;
-  /* Samanbrotið: flýtihnappar beint, svo einn smellur dugi fyrir t.d. gufu og kalda pottinn eftir æfingu */
-  if (!open) return `<section class="glass spaquick"><div class="tiny">Gufa, sauna, heitur eða kaldur pottur eftir æfinguna?</div>
-    <div class="opts">${['sauna', 'steam', 'cold', 'hot', 'infrared'].map(k => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${SPA[k].color}"></i>+ ${SPA[k].short === 'Kalt' ? 'Kaldur pottur' : SPA[k].short}</button>`).join('')}</div></section>`;
+  const list = draft.spa || [], st = canStretch() && draft.stretchOn, open = draft.type === 'swim' || list.length || draft.spaOpen || st;
+  const stChip = canStretch() && !st ? `<button class="chip spachip stchip" data-act="stretchon"><i style="background:${STRETCH_C}"></i>${open ? '' : '+ '}Teygjur</button>` : '';
+  /* Samanbrotið: flýtihnappar beint, svo einn smellur dugi fyrir t.d. teygjur, gufu og kalda pottinn eftir æfingu */
+  if (!open) return `<section class="glass spaquick"><div class="tiny">${canStretch() ? 'Teygjur, gufa eða pottur eftir æfinguna?' : 'Gufa, sauna, heitur eða kaldur pottur eftir æfinguna?'}</div>
+    <div class="opts">${stChip}${['sauna', 'steam', 'cold', 'hot', 'infrared'].map(k => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${SPA[k].color}"></i>+ ${SPA[k].short === 'Kalt' ? 'Kaldur pottur' : SPA[k].short}</button>`).join('')}</div></section>`;
   return `<section class="glass spaed">
-    <div class="slabel" style="padding:14px 16px 4px">Gufa og pottar<div class="tiny">Bættu við í þeirri röð sem þú fórst, t.d. sauna, kalt, sauna, kalt</div></div>
-    <div class="opts" style="padding:6px 16px 10px">${Object.entries(SPA).map(([k, v]) => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${v.color}"></i>${v.short === 'Kalt' ? 'Kaldur pottur' : v.short}</button>`).join('')}</div>
+    <div class="slabel" style="padding:14px 16px 4px">${canStretch() ? 'Eftir æfinguna' : 'Gufa og pottar'}<div class="tiny">${canStretch() ? 'Teygjur, gufa og pottar. Bættu við í þeirri röð sem þú fórst, t.d. sauna, kalt, sauna, kalt' : 'Bættu við í þeirri röð sem þú fórst, t.d. sauna, kalt, sauna, kalt'}</div></div>
+    <div class="opts" style="padding:6px 16px 10px">${stChip}${Object.entries(SPA).map(([k, v]) => `<button class="chip spachip" data-act="spaadd" data-k="${k}"><i style="background:${v.color}"></i>${v.short === 'Kalt' ? 'Kaldur pottur' : v.short}</button>`).join('')}</div>
+    ${st ? `<ul class="sparows stretchrow"><li>
+      <span class="spn"><i style="background:${STRETCH_C}"></i>Teygjur</span>
+      <button class="mv" data-act="stretchstep" data-d="-1" aria-label="Styttri teygjur">−</button>
+      <span class="unitwrap"><input class="in" data-field="stretchRaw" inputmode="decimal" value="${esc(draft.stretchRaw || '')}" placeholder="–" aria-label="Tími í teygjum, má sleppa"><span class="unit">mín</span></span>
+      <button class="mv" data-act="stretchstep" data-d="1" aria-label="Lengri teygjur">+</button>
+      <button class="xbtn" data-act="stretchoff" aria-label="Fjarlægja teygjur">${ICON.x}</button></li></ul>
+      <div class="tiny sthint">${CHECK} Telst með í hve oft þú teygir eftir æfingar. Tíminn má vera tómur.</div>` : ''}
     ${list.length ? `<ul class="sparows">${list.map((x, i) => `<li>
       <span class="spn"><i style="background:${SPA[x.kind].color}"></i>${SPA[x.kind].name}</span>
       <button class="mv" data-act="spastep" data-i="${i}" data-d="-1" aria-label="Mínútu styttra">−</button>
@@ -1161,6 +1203,12 @@ function spaEditor(){
   </section>`;
 }
 const spaParsed = () => (draft.spa || []).map(x => ({ kind: x.kind, min: parseDur(x.raw) })).filter(x => x.min > 0);
+const stretchParsed = () => canStretch() && draft.stretchOn ? { min: (parseDur(draft.stretchRaw) || 0) > 0 ? parseDur(draft.stretchRaw) : null } : null;
+/* Síðasti teygjutími hjá þessum prófíl, sem tillaga */
+function lastStretchMin(pid){
+  const s = mySessions(pid).filter(x => x.stretch && x.stretch.min > 0).sort(byDateDesc)[0];
+  return s ? s.stretch.min : 10;
+}
 /* Upphitun og niðurlag á þrektæki (aðeins í lyftingum). Samanbrotið: flýtihnappar og „Sama og síðast“, svo einn smellur dugi. */
 const minRaw = m => Math.abs(m - Math.round(m)) > 0.01 ? fmtDur(m) : String(Math.round(m));
 function lastCardio(when){
@@ -1233,6 +1281,7 @@ function startDraft(type, existing){
     draft.distRaw = existing.distance != null ? fmtIn(existing.distance) : '';
     draft.durRaw = existing.durationMin != null ? fmtDur(existing.durationMin) : '';
     draft.hrRaw = existing.avgHr ? String(existing.avgHr) : ''; draft.effort = existing.effort || '';
+    draft.stretchOn = !!existing.stretch; draft.stretchRaw = existing.stretch && existing.stretch.min > 0 ? minRaw(existing.stretch.min) : ''; delete draft.stretch;
     draft.spa = (existing.spa || []).map(x => ({ kind: x.kind, raw: Math.abs(x.min - Math.round(x.min)) > 0.01 ? fmtDur(x.min) : String(Math.round(x.min)) }));
     if (draft.type === 'lift'){ draft.cur = 0; draft.exercises = draft.exercises || []; draft.exercises.forEach(e => e.cur = null);
       draft.cardio = (existing.cardio || []).filter(x => MACHINES[x.machine]).map(x => cardioDraftOf(x)); }
@@ -1257,6 +1306,7 @@ function saveLog(){
     s.plan = d.plan || null;
     if (!s.exercises.length) return toast('Kláraðu að minnsta kosti eitt sett');
     s.spa = spaParsed(); if (!s.spa.length) s.spa = null;
+    s.stretch = stretchParsed();
     s.cardio = cardioParsed(); if (!s.cardio.length) s.cardio = null;
     if (s.durationMin == null && d.startedAt && s.date === ymd(new Date(d.startedAt))){ const m = (Date.now() - d.startedAt) / 60000;
       /* Upphitun sem var skráð eftir á (byrjaði áður en klukkan fór í gang) bætist við tímann */
@@ -1287,6 +1337,7 @@ function saveLog(){
     s.intensity = has('intensity') ? (d.intensity || null) : null;
     if (has('hr') && d.type !== 'run'){ const hr = num(d.hrRaw); s.avgHr = hr && hr > 40 && hr < 230 ? Math.round(hr) : null; }
     s.spa = spaParsed(); if (!s.spa.length) s.spa = null;
+    s.stretch = stretchParsed();
     const anything = s.wod || (s.prs || []).length || (s.exercises || []).length || s.pool || s.distance || s.durationMin || s.spa || s.score || s.balls || s.longest || s.runs || s.elevation || s.title;
     if (!anything) return toast(d.type === 'swim' ? 'Settu inn vegalengd, tíma eða gufu og potta' : d.type === 'golf' ? 'Settu inn högg, bolta eða tíma' : has('distance') ? 'Settu inn vegalengd eða tíma' : 'Settu inn tíma');
     if (d.type === 'run'){
@@ -1594,6 +1645,7 @@ function renderProgress(){
           <div class="glass"><div class="v">${nf(nsets)}</div><div class="l">Sett samtals</div></div>
           <div class="glass"><div class="v">${tot >= 3600 ? `${nf(tot / 3600, 1)} klst` : fmtSec(tot)}</div><div class="l">Samtals tími</div></div>
         </div>
+        ${stretchCard('lift')}
         <div class="glass" style="margin-top:10px;overflow:hidden"><table class="tbl"><thead><tr><th>Dags.</th><th>Sett</th></tr></thead><tbody>
           ${h.slice().reverse().slice(0, 8).map(x => `<tr><td>${fmtDate(x.date)}</td><td>${x.sets.map(setTxt).join(', ')}</td></tr>`).join('')}</tbody></table></div>`;
       } else
@@ -1606,6 +1658,7 @@ function renderProgress(){
           <div class="glass"><div class="v">${Math.max(...h.map(x => x.maxReps))}</div><div class="l">Flest reps í setti</div></div>
           <div class="glass"><div class="v">${totVol >= 10000 ? nf(totVol/1000, 1) + ' t' : nf(totVol) + ' kg'}</div><div class="l">Samtals lyft</div></div>
         </div>
+        ${stretchCard('lift')}
         <div class="glass" style="margin-top:10px;overflow:hidden"><table class="tbl"><thead><tr><th>Dags.</th><th>Sett</th></tr></thead><tbody>
           ${h.slice().reverse().slice(0, 8).map(x => `<tr><td>${fmtDate(x.date)}</td><td>${x.sets.map(setTxt).join(', ')}</td></tr>`).join('')}</tbody></table></div>
         ${bwk ? '<p class="tiny">Heildarþyngd er líkamsþyngd með aukaþyngd eða að frádreginni léttingu. Þannig sést framförin frá léttingu yfir í eigin þyngd og aukaþyngd.</p>' : ''}
@@ -1672,7 +1725,8 @@ function renderProgress(){
           ${type === 'run' ? (() => { const recent = ss.filter(s => s.date >= since28 && effortOf(s)), easy = recent.filter(s => effortOf(s) === 'easy').length;
             return recent.length ? `<div class="glass" style="grid-column:span 2"><div class="v">${easy} af ${recent.length}</div><div class="l">hlaupum síðustu 4 vikur voru róleg</div></div>` : ''; })() : ''}
           ${subBreak()}
-        </div>`;
+        </div>
+        ${stretchCard(type)}`;
     } else if (all.length){
       const weeks = weekly(s => s.durationMin || 0), mins = all.reduce((a, s) => a + (s.durationMin || 0), 0);
       const last28 = all.filter(s => s.date >= since28), withDur = all.filter(s => s.durationMin);
@@ -1685,6 +1739,7 @@ function renderProgress(){
           ${type === 'swim' ? spaStats() : ''}
           ${subBreak()}
         </div>
+        ${stretchCard(type)}
         ${type === 'class' ? pbStats() + wodStats() : ''}`;
     } else {
       body = `${chips}${type === 'swim' && spaStats() ? `<div class="kv">${spaStats()}</div>` : `<div class="glass empty">Ekkert skráð í ${esc(T.name.toLowerCase())} ennþá.</div>`}`;
@@ -1816,6 +1871,7 @@ function sharedOf(s, vis){
     volume: full && s.type === 'lift' ? sessionVolume(s) : null,
     detail: full ? { exercises: s.exercises || null, notes: s.notes || '', wodDesc: s.wodDesc || null } : null };
   if ((s.cardio || []).length) d.cardio = s.cardio;   /* aðeins ef til, svo undirskrift eldri æfinga breytist ekki */
+  if (s.stretch) d.stretch = { min: s.stretch.min > 0 ? s.stretch.min : null };
   d.sig = hashStr(JSON.stringify(d));
   return d;
 }
@@ -1944,7 +2000,7 @@ function friendsWeek(){
           ${kudosBtn('data-gkudos', a.ownerId, a.g.id, k)}</li>`; }
       const n = Object.keys(a.kudos).length, mine = !!a.kudos[me.uid];
       return `<li><button class="item" data-fdetail="${esc(a.ownerId)}|${esc(a.id)}"><span class="feedav">${avatar(a.ownerId, 38)}<i style="background:${tc(TYPES[a.type] ? a.type : 'other')}"></i></span>
-        <span style="min-width:0"><div class="t">${esc(nameOf(a.ownerId))}: ${esc(actTitle(a))}${effPill(a.effort)}${pbPill(a)}</div><div class="s">${esc(actSummary(a))}</div>${cardioPills(a.cardio)}${spaPills(a.spa)}<div class="tiny">${fmtDate(a.date)}</div></span></button>
+        <span style="min-width:0"><div class="t">${esc(nameOf(a.ownerId))}: ${esc(actTitle(a))}${effPill(a.effort)}${pbPill(a)}</div><div class="s">${esc(actSummary(a))}</div>${cardioPills(a.cardio)}${spaPills(a.spa, a.stretch)}<div class="tiny">${fmtDate(a.date)}</div></span></button>
         <button class="cbtn" data-fdetail="${esc(a.ownerId)}|${esc(a.id)}" aria-label="Athugasemdir"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.5-4.8A8 8 0 1 1 21 12z"/></svg></button>
         ${kudosBtn('data-kudos', a.ownerId, a.id, a.kudos)}</li>`; }).join('')}</ul>`
       : `<div class="glass empty">Ekkert skráð hjá vinum síðustu tvær vikur.</div>`}`;
@@ -1989,7 +2045,7 @@ function friendsChallenges(){
 function openFriendDetail(uid, id){
   const a = actsOf(uid).find(x => x.id === id); if (!a) return;
   const det = a.detail;
-  openSheet(`${nameOf(uid)}: ${actTitle(a)}`, `<div style="display:flex;justify-content:center;margin-bottom:8px">${avatar(uid, 64)}</div><p class="muted" style="margin-top:0;text-align:center">${fmtDate(a.date)}, ${esc(actSummary(a))}</p>${a.spa && a.spa.length ? `<div style="display:flex;justify-content:center">${spaPills(a.spa)}</div>` : ''}
+  openSheet(`${nameOf(uid)}: ${actTitle(a)}`, `<div style="display:flex;justify-content:center;margin-bottom:8px">${avatar(uid, 64)}</div><p class="muted" style="margin-top:0;text-align:center">${fmtDate(a.date)}, ${esc(actSummary(a))}</p>${a.spa && a.spa.length ? `<div style="display:flex;justify-content:center">${spaPills(a.spa, a.stretch)}</div>` : ''}
     ${det ? `${(det.exercises || []).map(e => `<div class="grp">${esc(e.name || exName(e.exId))}</div><p style="margin:2px 0 8px">${(e.sets || []).map(setTxt).join(', ')}</p>`).join('')}
       ${det.notes ? `<div class="grp">Athugasemd</div><p style="margin:2px 0">${esc(det.notes)}</p>` : ''}`
     : `<p class="tiny">${esc(nameOf(uid))} deilir bara yfirliti, ekki einstökum settum og þyngdum.</p>`}
@@ -2323,7 +2379,7 @@ function exportTables(scope){
     cols: [['Dagsetning','date'],['Nafn','person'],['Íþrótt','type'],['Heiti','title'],['Vegalengd','distance'],['Eining','unit'],['Tími (mín)','duration_min'],
       ['Tími','duration'],['Hraði','pace'],['Hraðaeining','pace_unit'],['Meðalpúls','avg_hr'],['Álag','effort'],['Fjöldi æfinga','exercises'],
       ['Fjöldi setta','sets'],['Heildarþyngd (kg)','volume_kg'],['Heitur pottur (mín)','hot_tub_min'],['Gufa (mín)','steam_min'],['Sauna (mín)','sauna_min'],
-      ['Infrarauð sauna (mín)','infrared_min'],['Kaldi potturinn (mín)','cold_plunge_min'],['Hækkun (m)','elevation_m'],['Ferðir','runs'],
+      ['Infrarauð sauna (mín)','infrared_min'],['Kaldi potturinn (mín)','cold_plunge_min'],['Teygjur','stretched'],['Teygjur (mín)','stretch_min'],['Hækkun (m)','elevation_m'],['Ferðir','runs'],
       ['Högg','golf_strokes'],['Par','golf_par'],['Miðað við par','golf_to_par'],['Punktar','golf_points'],['Völlur','course'],['Lengsti bolti (m)','longest_ball_m'],['Boltar','balls'],['Lotur','rounds'],['Erfiðasta leið','grade'],
       ['Sundlaug','pool'],['Box','box'],['WOD','wod'],['Personal best','personal_best'],['Álag (handvirkt)','intensity'],['Úrslit','result'],['Athugasemd','notes'],['Auðkenni','id']],
     rows: sess.map(s => { const T = TYPES[s.type] || TYPES.other, cfg = typeCfg(s.type, s.sub), p = paceText(s.type, s.distance, s.durationMin, s.sub), ef = effortOf(s);
@@ -2331,6 +2387,7 @@ function exportTables(scope){
         s.durationMin != null ? fmtDur(s.durationMin) : '', p ? p.v : '', p ? p.l : '', s.avgHr ?? null, ef ? EFFORT[ef].name : '',
         s.type === 'lift' ? (s.exercises || []).length : null, s.type === 'lift' ? setCount(s) : null, s.type === 'lift' ? r2(sessionVolume(s), 1) : null,
         ...['hot', 'steam', 'sauna', 'infrared', 'cold'].map(k => { const t = spaTotals(s.spa).find(x => x.kind === k); return t ? r2(t.min, 1) : null; }),
+        s.stretch ? 'Já' : '', s.stretch && s.stretch.min > 0 ? r2(s.stretch.min, 1) : null,
         s.elevation ?? null, s.runs ?? null, s.score ?? null, s.par ?? null, s.score && s.par ? s.score - s.par : null, s.points ?? null, s.course || '', s.longest ?? null, s.balls ?? null, s.rounds ?? null, s.grade || '',
         s.pool || '', s.box || '', s.wod || '', (s.prs || []).map(p => `${p.name} ${pbText(p)}`).join('; '), s.intensity ? INTENSITY[s.intensity] : '', s.result || '',
         s.notes || '', s.id]; })
@@ -3009,7 +3066,7 @@ function commentCard(){
 }
 
 /* ---------- Ábendingar ---------- */
-const APP_VERSION = '3.9';
+const APP_VERSION = '3.10';
 const FB_TYPES = { idea: { name: 'Hugmynd', desc: 'Viðbót eða breyting sem væri gaman að sjá', ph: 'T.d. væri gott að geta…' },
   bug: { name: 'Villa', desc: 'Eitthvað virkar ekki eins og það á að gera', ph: 'Hvað gerðist, og hvað áttirðu von á?' },
   other: { name: 'Annað', desc: 'Hrós, spurning eða annað', ph: 'Skrifaðu hér…' } };
@@ -4133,7 +4190,7 @@ async function afterAuth(user){
 
 /* ---------- Atburðir ---------- */
 /* Haldið inni á + og −: talan heldur áfram að breytast, fyrst hægt og svo hraðar */
-const HOLD_ACTS = new Set(['step', 'diststep', 'spastep', 'cdstep']);
+const HOLD_ACTS = new Set(['step', 'diststep', 'spastep', 'cdstep', 'stretchstep']);
 let holdT = null, holdBtn = null, holdN = 0, holdFired = false;
 function holdStop(){ clearTimeout(holdT); holdT = null; holdBtn = null; }
 function holdTick(){
@@ -4388,6 +4445,10 @@ document.addEventListener('click', async e => {
     case 'strm': draft.exercises.splice(+d.ei, 1); saveDraft(); render(); break;
     case 'setint': draft.intensity = draft.intensity === d.v ? '' : d.v; saveDraft(); render(); break;
     case 'spaopen': draft.spaOpen = true; saveDraft(); render(); break;
+    case 'stretchon': draft.stretchOn = true; if (draft.stretchRaw == null || draft.stretchRaw === '') draft.stretchRaw = minRaw(lastStretchMin(draft.profileId)); saveDraft(); render(); break;
+    case 'stretchoff': draft.stretchOn = false; saveDraft(); render(); break;
+    case 'stretchstep': { const v = parseDur(draft.stretchRaw) || 0; draft.stretchRaw = String(Math.max(0, Math.round(v) + (+d.d)));
+      const inp = view.querySelector('[data-field="stretchRaw"]'); if (inp) inp.value = draft.stretchRaw; saveDraft(); break; }
     case 'spaadd': { draft.spa = draft.spa || []; const last = [...draft.spa].reverse().find(x => x.kind === d.k);
       draft.spa.push({ kind: d.k, raw: last ? last.raw : SPA[d.k].def }); saveDraft(); render();
       const ins = view.querySelectorAll('[data-spa]'); if (ins.length) ins[ins.length - 1].scrollIntoView({ block: 'center' }); break; }
@@ -4598,13 +4659,14 @@ function openNews(){
       <div class="tmring" style="--p:62"><svg viewBox="0 0 120 120"><circle class="tr" cx="60" cy="60" r="53"/><circle class="tp" cx="60" cy="60" r="53" pathLength="100"/></svg>
         <div class="tmv"><span>Eftir</span><b>0:17</b></div></div>
       <div class="nwbw"><span>80 kg</span><span>− 20 kg létting</span><b>60 kg</b></div></div>
-    <p class="nwver">Útgáfa ${NEWS}</p>
-    <h3 class="nwh">Planki og upphífingar</h3>
+    <p class="nwver">Útgáfa ${APP_VERSION}</p>
+    <h3 class="nwh">Planki, upphífingar og teygjur</h3>
     <p class="nwlead">Nú er hægt að skrá æfingar sem eru haldnar í tíma, og upphífingar og dýfur með eigin þyngd, aukaþyngd eða léttingu.</p>
     <ul class="nwlist">
       ${row(PLAYI, 'Planki með niðurtalningu', 'Veldu tíma og ýttu á „Telja niður“. Þú færð 5 sekúndur til að koma þér í stöðu, píp síðustu þrjár sekúndurnar og settið skráist sjálft. Líka hliðarplanki, dauðahang og veggseta.')}
       ${row(SWI, 'Eða skráðu tímann sjálf(ur)', '„Skrá sett“ skráir tímann í reitnum án tímatöku. Í „Til þrots“ verður niðurtalningin að skeiðklukku sem þú stöðvar þegar þú hættir.')}
       ${row('±', 'Upphífingar og dýfur', 'Veldu Eigin þyngd, + Aukaþyngd eða − Létting. Appið reiknar heildarþyngdina út frá líkamsþyngdinni: 80 kg með 20 kg léttingu eru 60 kg.')}
+      ${row(`<i class="pdot" style="background:${STRETCH_C}"></i>`, 'Teygjur eftir æfingar', 'Merktu við teygjur í lok æfingar, þar sem gufan og pottarnir eru. Undir Framfarir sérðu eftir hve stórum hluta æfinga þú teygir.')}
       ${row(NW_GEAR, 'Framfarir og eigin æfingar', 'Heildarþyngdin fer í línuritið, svo þú sérð leiðina frá léttingu yfir í aukaþyngd. Eigin æfingu má skrá sem tíma eða eigin þyngd.')}
     </ul>
     <button class="btn primary block nwok" data-act="newsok">Í lagi</button></div>`);

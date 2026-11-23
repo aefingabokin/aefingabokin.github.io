@@ -30,8 +30,19 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.9, CACHE v66)
-3.9: tímaæfingar (planki) og eigin þyngd (upphífingar, dýfur).
+## Staða (útgáfa 3.10, CACHE v67)
+3.10: teygjur eftir æfingu.
+- Í hlutanum „Eftir æfinguna“ (`spaEditor`, með gufu og pottum) er „+ Teygjur“ fremst. Vistað sem `s.stretch = { min }`
+  (`min` null ef tíminn er tómur). Tillaga að tíma er síðasti teygjutími (`lastStretchMin`, annars 10). Ekki í boði eftir jóga.
+- Teygjur birtast fremst í gufu/potta-merkjunum (`spaPills(totals, stretch)`), líka hjá vinum (`sharedOf` sendir `stretch`
+  aðeins ef til, svo undirskrift eldri æfinga breytist ekki).
+- Hlutfall (`stretchStats`, `stretchCard`): síðustu 4 vikur, breyting frá fyrri 4 vikum í prósentustigum, 8 vikna stólpar,
+  allar æfingar og meðaltími. Sýnt undir Framfarir → Lyftingar og hverri íþrótt, aðeins ef teygjur hafa einhvern tíma verið
+  skráðar. Telst ekki með (`stretchable`): jóga, laugarferð án sunds, æfingar úr úri nema teygjur séu skráðar á þær.
+- Útflutningur æfinga: dálkarnir Teygjur og Teygjur (mín). Kynningarglugginn (`NEWS` enn '3.9') nefnir teygjurnar líka.
+- Prófanir: 37 af 40 (`dev/test-stretch.mjs` nýtt). Klasinn `.strow` er frátekinn (CrossFit-styrkur); teygjulínan heitir `.stretchrow`.
+
+3.9 (CACHE v66): tímaæfingar (planki) og eigin þyngd (upphífingar, dýfur).
 - `exKind(ex)` í `ui.js`: `'time'` (`KIND_TIME`: Planki, Hliðarplanki, Dauðahang, Veggseta), `'bw'` (`KIND_BW`: Upphífingar,
   Hökulyftur, Dýfur og „með aðstoð“-útgáfurnar) eða `'reps'`. Eigin æfingar fá `kind` af heitinu (`guessKind`) og má breyta
   („Skráð sem“ á meðan engin sett eru skráð). Nýjar tímaæfingar eru ekki í `EXMETA`, svo þær fara ekki í æfingaplön.

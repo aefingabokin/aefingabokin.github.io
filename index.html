@@ -1396,6 +1396,22 @@ button, a, summary, label, input, select, textarea{-webkit-tap-highlight-color:t
 .tmsnd{font-size:13px;margin-top:-6px}
 @media (prefers-reduced-motion: reduce){.tmbox, .tmbox.last .tmv b{animation:none}.tmring .tp, .bwseg button{transition:none}}
 
+/* Teygjur eftir æfingar (3.10) */
+.sthint{display:flex;align-items:center;gap:6px;padding:0 16px 12px}.sthint svg{width:14px;height:14px;color:var(--c-yoga);flex:none}
+.stcard{padding:16px;margin-top:12px;display:flex;flex-direction:column;gap:10px}
+.sthead{display:flex;align-items:center;gap:14px}.sthead b{font-size:16px}.sthead .ring{flex:none}
+.sttrend em{font-style:normal;font-weight:800;color:var(--ink-2)}.sttrend em.up{color:var(--c-walk)}
+.stbars{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;height:44px;align-items:end}
+.stb{height:100%;border-radius:8px;background:var(--field);display:flex;align-items:flex-end;overflow:hidden}
+.stb i{display:block;width:100%;background:var(--c-yoga);border-radius:8px}
+.stb.none{background:none;box-shadow:inset 0 0 0 1px var(--hair)}
+.stfoot{display:flex;justify-content:space-between;margin-top:-4px}
+.stx{color:var(--ink-2)}
+#view.enter .stb i{animation:growy .7s var(--e-out) .25s backwards}
+@keyframes growy{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.stb i{transform-origin:bottom}
+@media (prefers-reduced-motion: reduce){#view.enter .stb i{animation:none}}
+
 /* Hleðsluskjár: merkið með súlum sem anda */
 .gate.boot{display:grid;justify-items:center;gap:16px;margin-top:26vh;padding:0;animation:fadein .4s ease .12s backwards}
 .bootlogo{width:84px;height:84px;border-radius:20px;box-shadow:0 12px 32px rgba(4,12,24,.28)}
