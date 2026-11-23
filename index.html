@@ -1269,6 +1269,10 @@ body.kp-flex .tabs{visibility:hidden}
 .nwhero{display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 12px 16px;border-radius:22px;background:var(--kp-bg);margin-bottom:14px}
 .nwhero .kpbar.big{transform:scale(1.25);height:56px}
 .nwkeys{display:grid;grid-template-columns:repeat(4,46px);gap:6px}
+.nwhero.nw39{flex-direction:row;justify-content:center;gap:22px}
+.nw39 .tmring{width:112px}.nw39 .tmv b{font-size:30px;letter-spacing:-.5px}.nw39 .tmv span{font-size:11px}
+.nwbw{display:flex;flex-direction:column;gap:2px;font-weight:700;font-size:14px;color:var(--ink-2)}
+.nwbw b{font-size:28px;color:var(--ink);border-top:2px solid var(--hair);padding-top:4px;margin-top:2px}
 .nwkeys i{font-style:normal;height:38px;border-radius:11px;background:var(--kp-key);box-shadow:var(--kp-sh);display:grid;place-items:center;font-weight:800;font-size:16px}
 .nwkeys i.st{background:var(--kp-fn);font-size:13px}
 .nwkeys i.go{grid-column:span 4;background:var(--solid);color:var(--solid-ink);font-size:14px}
@@ -1353,6 +1357,44 @@ button, a, summary, label, input, select, textarea{-webkit-tap-highlight-color:t
 .tabs button.tab-log:active .plus{transform:scale(.92)}
 .tabs button.tab-log .plus svg{transition:transform .45s var(--e-spring)}
 .tabs button.tab-log[aria-current="page"] .plus svg{transform:rotate(90deg)}
+
+/* Tímaæfingar (planki) og eigin þyngd (upphífingar) – 3.9 */
+.stypes.n3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.bwseg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:20px;background:var(--field)}
+.bwseg button{border:0;background:none;border-radius:16px;min-height:40px;font-weight:800;font-size:13px;color:var(--ink-2);padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background-color .2s var(--e-out),color .2s var(--e-out)}
+.bwseg button[aria-pressed="true"]{background:var(--solid);color:var(--solid-ink)}
+@media (max-width:380px){.bwseg button{font-size:12px;padding:0 1px;letter-spacing:-.2px}.bwrow{grid-template-columns:auto 92px minmax(0,1fr);gap:8px}}
+.bwrow{display:grid;grid-template-columns:auto 104px minmax(0,1fr);align-items:center;gap:10px}
+.bwrow label{font-size:13px;font-weight:700;color:var(--ink-2)}
+.bwrow .unitwrap .in{min-height:42px;padding:6px 34px 6px 12px;font-weight:800;font-size:17px}
+.bwrow .unitwrap .unit{right:12px;font-size:13px}
+.bwtot{display:flex;flex-direction:column;align-items:flex-end;text-align:right;line-height:1.15;min-width:0}
+.bwtot b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.bwk{font-size:12px;font-weight:700;color:var(--ink-2);background:var(--field);border-radius:10px;padding:2px 7px;margin-left:2px;white-space:nowrap}
+.kindrow{display:flex;align-items:center;gap:10px;margin:-2px 2px 10px}.kindrow .bwseg{flex:1}
+.secpre{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:-4px}
+.secpre button{border:0;background:var(--field);border-radius:14px;min-height:36px;min-width:52px;padding:0 10px;font-weight:800;font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.secpre button[aria-pressed="true"]{background:var(--solid);color:var(--solid-ink)}
+.bigbtn.go{display:flex;align-items:center;justify-content:center;gap:10px}
+.tmhint{text-align:center;margin-top:-4px}
+.tmbox{display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:4px;animation:rise .35s var(--e-out)}
+.tmring{position:relative;width:min(240px,62vw);aspect-ratio:1}
+.tmring svg{display:block;width:100%;height:100%;transform:rotate(-90deg)}
+.tmring circle{fill:none;stroke-width:9}
+.tmring .tr{stroke:var(--field)}
+.tmring .tp{stroke:var(--c-lift);stroke-linecap:round;stroke-dasharray:100 100;stroke-dashoffset:calc(100 - var(--p, 0));transition:stroke-dashoffset .12s linear,stroke .3s var(--e-out)}
+.tmbox.lead .tp{stroke:var(--ink-3)}
+.tmbox.sw .tp{stroke:var(--c-walk)}
+.tmbox.last .tp{stroke:var(--c-run)}
+.tmv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:2px}
+.tmv span{font-size:13px;font-weight:700;color:var(--ink-2)}
+.tmv b{font-size:clamp(46px,15vw,66px);font-weight:800;letter-spacing:-1px;line-height:1.05;font-variant-numeric:tabular-nums}
+.tmv small{font-size:12px;color:var(--ink-2);max-width:70%}
+.tmbox.last .tmv b{color:var(--c-run);animation:tmpulse 1s var(--e-out) infinite}
+@keyframes tmpulse{0%{transform:scale(1.08)}100%{transform:scale(1)}}
+.tmbox .setbtns{width:100%}
+.tmsnd{font-size:13px;margin-top:-6px}
+@media (prefers-reduced-motion: reduce){.tmbox, .tmbox.last .tmv b{animation:none}.tmring .tp, .bwseg button{transition:none}}
 
 /* Hleðsluskjár: merkið með súlum sem anda */
 .gate.boot{display:grid;justify-items:center;gap:16px;margin-top:26vh;padding:0;animation:fadein .4s ease .12s backwards}

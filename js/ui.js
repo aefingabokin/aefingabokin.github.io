@@ -306,14 +306,14 @@ const LIB = [
     'Upphífingar með aðstoð|assisted pull up easy chin dip', 'Niðurtog, mjótt grip|close grip pulldown', 'Beinarma niðurtog|straight arm pulldown',
     'Axlayppingar (shrugs)|shrug shrugs', 'Niðurtog í vél|pulldown machine vertical traction iso lateral',
     'Róður fyrir efra bak í vél|upper back row high row machine', 'Yfirtog í vél (pullover)|pullover machine',
-    'Mjóbaksrétta í vél|lower back machine back extension machine']],
+    'Mjóbaksrétta í vél|lower back machine back extension machine', 'Dauðahang (dead hang)|dead hang bar hang grip']],
   ['Fætur', [
     'Fótapressa|leg press linear leg press 45', 'Hnébeygja|squat back squat', 'Fótarétta|leg extension', 'Fótakreppa|leg curl lying leg curl prone leg curl',
     'Framstig|lunge lunges walking lunge', 'Kálfalyfta|calf raise standing', 'Rúmensk réttstöðulyfta (RDL)|romanian deadlift rdl',
     'Hack squat|hack squat', 'Framhnébeygja|front squat', 'Bikarhnébeygja (goblet)|goblet squat', 'Búlgarskt framstig|bulgarian split squat',
     'Hnébeygja í Smith-vél|smith machine squat', 'Uppstig (step-up)|step up', 'Fótakreppa sitjandi|seated leg curl',
     'Kálfalyfta sitjandi|seated calf raise', 'Súmó-réttstöðulyfta|sumo deadlift', 'Fótakreppa standandi|standing leg curl',
-    'Beltishnébeygja|belt squat']],
+    'Beltishnébeygja|belt squat', 'Veggseta (wall sit)|wall sit']],
   ['Rass og mjaðmir', [
     'Mjaðmalyfta (hip thrust)|hip thrust', 'Mjaðmabrú (glute bridge)|glute bridge', 'Mjaðmaútfærsla í vél|hip abduction machine abductor standing abductor',
     'Mjaðmaaðfærsla í vél|hip adduction machine adductor', 'Rassspyrna í kapli|cable kickback glute kickback',
@@ -334,7 +334,8 @@ const LIB = [
   ['Kviður', [
     'Kviðkreppur|crunch crunches sit up', 'Fótalyftur|leg raise', 'Kapalkreppur|cable crunch', 'Rússneskur snúningur|russian twist',
     'Kviðhjól|ab wheel rollout', 'Hangandi fótalyftur|hanging leg raise', 'Kviðkreppur í vél|ab crunch machine abdominal crunch total abdominal',
-    'Hliðarbeygjur|side bend oblique', 'Pallof-pressa|pallof press', 'Bolsnúningur í vél|rotary torso machine oblique twist']],
+    'Hliðarbeygjur|side bend oblique', 'Pallof-pressa|pallof press', 'Bolsnúningur í vél|rotary torso machine oblique twist',
+    'Planki|plank front plank forearm plank', 'Hliðarplanki|side plank']],
   ['Alhliða', [
     'Ketilbjöllusveifla|kettlebell swing kb', 'Frívending (power clean)|power clean', 'Thruster|thruster', 'Burpees|burpee burpees',
     'Snörun (snatch)|snatch power snatch squat snatch', 'Jafnhending (clean & jerk)|clean and jerk c&j', 'Clean|squat clean hang clean', 'Push press|push press',
@@ -343,6 +344,25 @@ const LIB = [
   return {id: 'x_' + name.toLowerCase().replace(/[^a-z0-9áðéíóúýþæö]+/g,'-'), name, g, alias: alias || ''}; }));
 /* Leit án kommu og íslenskra sérstafa: „rettstodu“ finnur Réttstöðulyftu */
 const fold = t => String(t || '').toLowerCase().replace(/þ/g, 'th').replace(/ð/g, 'd').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+/* Hvernig æfing er skráð (3.9):
+   'time' – haldið í tíma (planki o.fl.): settið er { sec }, með niðurtalningu eða skeiðklukku.
+   'bw'   – eigin líkamsþyngd (upphífingar, dýfur): eigin þyngd, aukaþyngd (+) eða létting (−).
+            Settið er { kg: heildarþyngd, reps, add: +/− kg, bw: líkamsþyngd }. Heildarþyngdin fer í met og línurit.
+   'reps' – venjuleg þyngd og endurtekningar. Eigin æfingar fá tegund af heitinu (`kind`), sem má breyta. */
+const libId = name => 'x_' + name.toLowerCase().replace(/[^a-z0-9áðéíóúýþæö]+/g, '-');
+const KIND_TIME = new Set(['Planki', 'Hliðarplanki', 'Dauðahang (dead hang)', 'Veggseta (wall sit)'].map(libId));
+const KIND_BW = new Set(['Upphífingar', 'Hökulyftur (chin-up)', 'Upphífingar með aðstoð', 'Dýfur', 'Dýfur með aðstoð'].map(libId));
+const guessKind = name => /plank|planki|dead ?hang|dauðahang|wall ?sit|veggset|\bhold\b/i.test(name) ? 'time'
+  : /upph[ií]f|hökulyft|chin.?up|pull.?up|dýfur|\bdips?\b/i.test(name) && !/vél|machine/i.test(name) ? 'bw' : 'reps';
+const assistByDefault = ex => /aðstoð|assist/i.test((ex && (ex.name || exName(ex.exId))) || '');
+function exKind(ex){
+  if (!ex) return 'reps';
+  const id = ex.exId || ex.id;
+  if (KIND_TIME.has(id)) return 'time';
+  if (KIND_BW.has(id)) return 'bw';
+  const c = (state.customExercises || []).find(e => e.id === id);
+  return (c && c.kind) || 'reps';
+}
 
 /* ---------- Ástand ---------- */
 let gate = 'loading';           // config | login | loading | onboard | error | app
@@ -379,8 +399,45 @@ const inviteLink = () => `${location.origin}${location.pathname}?join=${hid}`;
 const setVol = st => st.type === 'warm' ? 0 : (num(st.kg) || 0) * (num(st.reps) || 0) + (st.drops || []).reduce((a, x) => a + (num(x.kg) || 0) * (num(x.reps) || 0), 0);
 const e1rm = (kg, reps) => (!kg || !reps) ? 0 : (reps === 1 ? kg : kg * (1 + reps / 30));
 const sessionVolume = s => (s.exercises || []).reduce((a, e) => a + e.sets.reduce((b, st) => b + setVol(st), 0), 0);
-const setCount = s => (s.exercises || []).reduce((a, e) => a + e.sets.filter(st => num(st.reps) && st.type !== 'warm').length, 0);
-const setTxt = st => `${nf(num(st.kg), 2)} kg × ${num(st.reps) ?? 0}`;
+/* Vinnusett með einhverju skráðu (reps, eða tími í tímaæfingu) */
+const realSet = st => !!st && st.type !== 'warm' && ((num(st.reps) || 0) > 0 || (num(st.sec) || 0) > 0);
+const setCount = s => (s.exercises || []).reduce((a, e) => a + e.sets.filter(realSet).length, 0);
+/* Tími í tímaæfingu: „45 sek“, „1:30 mín“. Í reitnum alltaf m:ss („0:45“). */
+const fmtSec = v => { const t = Math.max(0, Math.round(num(v) || 0)); return t < 60 ? `${t} sek` : `${Math.floor(t / 60)}:${pad(t % 60)} mín`; };
+const secRaw = v => { const t = Math.max(0, Math.round(v || 0)); return `${Math.floor(t / 60)}:${pad(t % 60)}`; };
+/* „1:30“ og „1.30“ = 90 sek, „1,5“ = 1,5 mín, „45“ = 45 sek */
+function parseSec(v){
+  const t = String(v ?? '').trim(); if (!t) return null;
+  let m = t.match(/^(\d+)\s*:\s*(\d{1,2})$/) || t.match(/^(\d+)[.,](\d{2})$/);
+  if (m) return (+m[1]) * 60 + Math.min(59, +m[2]);
+  m = t.match(/^(\d+)[.,](\d)$/); if (m) return Math.round((+m[1] + (+m[2]) / 10) * 60);
+  const n = num(t); return n != null && n >= 0 ? Math.round(n) : null;
+}
+/* Eigin þyngd: „Eigin þyngd“, „+10 kg“, „−20 kg“ (létting) */
+const addTxt = a => a > 0 ? `+${nf(a, 2)} kg` : a < 0 ? `−${nf(-a, 2)} kg` : 'Eigin þyngd';
+const setTxt = st => st.sec != null ? fmtSec(st.sec)
+  : st.add != null ? (num(st.add) ? `${addTxt(num(st.add))} × ${num(st.reps) ?? 0}` : `${num(st.reps) ?? 0} reps`)
+  : `${nf(num(st.kg), 2)} kg × ${num(st.reps) ?? 0}`;
+/* Aukaþyngd/létting setts. Eldri sett (fyrir 3.9) geymdu aðeins kg: aukaþyngd, eða léttingu í æfingum „með aðstoð“. */
+const addOf = (ex, st) => st.add != null ? (num(st.add) || 0) : (assistByDefault(ex) ? -1 : 1) * (num(st.kg) || 0);
+/* Líkamsþyngd: nýjasta mæling (Líkaminn) eða sú sem var síðast notuð í setti, hvort sem er nýrra */
+function bwGuess(pid){
+  let best = null;
+  const see = (date, kg) => { if (kg > 0 && (!best || (date || '') >= best.date)) best = { date: date || '', kg }; };
+  if (me && pid === me.uid) (measurements || []).forEach(m => see(m.date, num(m.weight)));
+  state.sessions.forEach(s => { if (s.profileId === pid) (s.exercises || []).forEach(e => (e.sets || []).forEach(st => { if (st.bw) see(s.date, num(st.bw)); })); });
+  return best ? best.kg : null;
+}
+/* Tölurnar í reitunum fyrir sett, eftir tegund æfingar */
+function curOf(ex, st){
+  const k = exKind(ex);
+  if (k === 'time') return { sec: st && num(st.sec) ? secRaw(num(st.sec)) : '0:30' };
+  if (k === 'bw'){
+    if (!st) return { kg: '', reps: '', mode: assistByDefault(ex) ? 'assist' : 'body' };
+    const a = addOf(ex, st); return { kg: a ? fmtIn(Math.abs(a)) : '', reps: String(st.reps ?? ''), mode: a > 0 ? 'plus' : a < 0 ? 'assist' : 'body' };
+  }
+  return st ? { kg: fmtIn(st.kg), reps: String(st.reps ?? '') } : { kg: '', reps: '' };
+}
 /* Sett með droppum: „80 kg × 8 ↘ 60 × 7 ↘ 45 × 8“ */
 const setTxtFull = (st, html) => setTxt(st) + (st.drops || []).map(x => `${html ? ` <span class="dropar">${DROPI}</span> ` : ' ↘ '}${nf(num(x.kg), 2)} × ${num(x.reps) ?? 0}`).join('');
 const setTag = (st, n) => st.type === 'warm' ? '<span class="tg w">U</span>' : st.type === 'drop' ? `<span class="tg d">D</span> ${n}` : st.type === 'fail' ? `<span class="tg f">Þ</span> ${n}` : `Sett ${n}`;
@@ -416,7 +473,7 @@ function lastPerformance(exId, excludeId, pid){
   const list = mySessions(pid).filter(s => (s.exercises || []).length && s.id !== excludeId).sort(byDateDesc);
   for (const s of list){
     const e = (s.exercises || []).find(x => x.exId === exId);
-    if (e && e.sets.some(st => num(st.reps) && st.type !== 'warm')) return {date: s.date, sets: e.sets.filter(st => num(st.reps) && st.type !== 'warm')};
+    if (e && e.sets.some(realSet)) return {date: s.date, sets: e.sets.filter(realSet)};
   }
   return null;
 }
@@ -424,11 +481,14 @@ const lastSetsOf = ex => (lastPerformance(ex.exId, draft && draft.id, draft && d
 function suggestion(ex, idx){
   const last = lastSetsOf(ex), work = ex.sets.filter(st => st.type !== 'warm'), i = idx ?? work.length;   /* upphitun telst ekki með, eins og í „Síðast“ */
   const s = last[i] || work[i - 1] || last[last.length - 1];
-  return s ? {kg: fmtIn(s.kg), reps: String(s.reps ?? '')} : {kg: '', reps: ''};
+  return curOf(ex, s || null);
 }
-function compare(st, prev){
+function compare(st, prev, ex){
   if (!prev) return null;
-  const k = num(st.kg) || 0, r = num(st.reps) || 0, pk = num(prev.kg) || 0, pr = num(prev.reps) || 0;
+  if (st.sec != null){ if (prev.sec == null) return null; const a = num(st.sec) || 0, b = num(prev.sec) || 0;
+    return a > b ? {t: `+${a - b} sek`, up: true} : a === b ? {t: 'Sama', up: false} : {t: `−${b - a} sek`, up: false}; }
+  const bw = ex && exKind(ex) === 'bw';   /* eigin þyngd: borið saman eftir aukaþyngd/léttingu, ekki líkamsþyngd þann daginn */
+  const k = bw ? addOf(ex, st) : num(st.kg) || 0, r = num(st.reps) || 0, pk = bw ? addOf(ex, prev) : num(prev.kg) || 0, pr = num(prev.reps) || 0;
   if (k > pk) return {t: `+${nf(k - pk, 1)} kg`, up: true};
   if (k === pk && r > pr) return {t: `+${r - pr} reps`, up: true};
   if (k === pk && r === pr) return {t: 'Sama', up: false};
@@ -455,12 +515,18 @@ function classifyRun(r, pool){
 }
 const runPool = pid => state.sessions.filter(x => x.profileId === pid && x.type === 'run');
 
+/* Saga æfingar. Tímaæfing: `best` er lengsti tími (sek). Eigin þyngd: heildarþyngd; eldri sett án líkamsþyngdar
+   fá núverandi líkamsþyngd svo línuritið hoppi ekki úr 0 í 80 kg. */
 function liftHistory(exId, pid = state.active){
+  const ex = { exId, name: exName(exId) }, kind = exKind(ex), timed = kind === 'time', bwNow = kind === 'bw' ? bwGuess(pid) : null;
+  const load = st => kind !== 'bw' || st.bw ? num(st.kg) || 0 : bwNow != null ? Math.max(0, bwNow + addOf(ex, st)) : num(st.kg) || 0;
   return mySessions(pid).filter(s => (s.exercises || []).length).map(s => {
     const e = (s.exercises||[]).find(x => x.exId === exId); if (!e) return null;
-    const sets = e.sets.filter(st => num(st.reps) && st.type !== 'warm'); if (!sets.length) return null;
-    return {date: s.date, sets, best: Math.max(...sets.map(st => num(st.kg) || 0)),
-      rm: Math.max(...sets.map(st => e1rm(num(st.kg)||0, num(st.reps)||0))),
+    const sets = e.sets.filter(realSet); if (!sets.length) return null;
+    if (timed) return {date: s.date, sets, timed, best: Math.max(...sets.map(st => num(st.sec) || 0)), rm: 0, vol: 0, maxReps: 0,
+      totSec: sets.reduce((a, st) => a + (num(st.sec) || 0), 0)};
+    return {date: s.date, sets, best: Math.max(...sets.map(load)),
+      rm: Math.max(...sets.map(st => e1rm(load(st), num(st.reps)||0))),
       vol: sets.reduce((a, st) => a + setVol(st), 0), maxReps: Math.max(...sets.map(st => num(st.reps) || 0))};
   }).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
 }
@@ -679,7 +745,7 @@ function renderHome(){
     goals: state.active === me.uid ? homeGoalsCard() : '',
     recent: `<h2>Síðustu æfingar</h2>
     ${recent.length ? `<ul class="list glass">${recent.map(itemHtml).join('')}</ul>` : `<div class="glass empty">Ekkert skráð ennþá. Fyrsta æfingin birtist hér um leið og hún er vistuð.</div>`}`,
-    prs: prs.length ? `<h2>Þyngstu settin</h2><div class="prs">${prs.map(p => `<div class="pr glass"><div class="n">${esc(exName(p.id))}</div><div class="k">${nf(p.best.best, 1)} <small>kg</small></div><div class="tiny">${fmtDate(p.best.date)}</div></div>`).join('')}</div>` : ''
+    prs: prs.length ? `<h2>Þyngstu settin</h2><div class="prs">${prs.map(p => `<div class="pr glass"><div class="n">${esc(exName(p.id))}</div><div class="k">${p.best.timed ? `${p.best.best < 60 ? p.best.best : secRaw(p.best.best)} <small>${p.best.best < 60 ? 'sek' : 'mín'}</small>` : `${nf(p.best.best, 1)} <small>kg</small>`}</div><div class="tiny">${fmtDate(p.best.date)}</div></div>`).join('')}</div>` : ''
   };
   /* Röð og sýnileiki spjalda kemur úr stillingum */
   /* Skráð er með hnappinum fyrir miðju í flipastikunni, svo enginn sér hnappur á forsíðunni */
@@ -764,10 +830,14 @@ function renderLift(){
     const last = lastSetsOf(ex), lp = lastPerformance(ex.exId, draft.id, draft.profileId);
     const editing = draft.editSet != null, si = editing ? draft.editSet : ex.sets.length;
     const dropping = !editing && draft.dropOf != null && ex.sets[draft.dropOf] ? ex.sets[draft.dropOf] : null, dropN = dropping ? (dropping.drops || []).length : 0;
-    const stype = editing ? (ex.sets[si] && ex.sets[si].type) || 'normal' : dropping ? 'drop' : (draft.setType || 'normal');
+    const stype = editing ? (ex.sets[si] && ex.sets[si].type) || 'normal' : dropping ? 'drop' : exKind(ex) !== 'reps' && draft.setType === 'drop' ? 'normal' : (draft.setType || 'normal');
     const workN = ex.sets.filter(st => st.type !== 'warm').length;     /* vinnusett (upphitun telst ekki með) */
     const wi = editing ? ex.sets.slice(0, si + 1).filter(st => st.type !== 'warm').length : workN + 1;
-    const prevSame = last[wi - 1], cur = ex.cur || (ex.cur = suggestion(ex));
+    const kind = exKind(ex), prevSame = last[wi - 1];
+    if (!ex.cur || (kind === 'time') !== (ex.cur.sec != null) || (kind === 'bw' && !ex.cur.mode)) ex.cur = suggestion(ex);   /* tegund eigin æfingar breytt */
+    const cur = ex.cur;
+    if (kind === 'bw' && draft.bwRaw == null){ const g = bwGuess(draft.profileId); draft.bwRaw = g ? fmtIn(g) : ''; }
+    const tm = !editing && draft.timed && draft.timed.ei === draft.cur ? draft.timed : null;
     const g = ssGroup(exs, draft.cur), gi = g ? g.idx.indexOf(draft.cur) : -1;
     const next = g ? exs[g.idx[g.idx.length - 1] + 1] : exs[draft.cur + 1];
     const round = g ? Math.min(...g.idx.map(i => exs[i].sets.filter(st => st.type !== 'warm').length)) + 1 : 0;
@@ -776,6 +846,7 @@ function renderLift(){
     const jl = !editing && justLogged && justLogged.ei === draft.cur && Date.now() - justLogged.at < 1100;
     const lastWork = ex.sets.filter(st => st.type !== 'warm').slice(-1)[0] || prevSame;
     kpLift = { sub: setLabel.replace(PENCIL, '').trim(), editing, btnLabel: editing ? 'Uppfæra sett' : btnLabel,
+      kgTitle: kind === 'bw' ? (cur.mode === 'assist' ? 'Létting' : 'Aukaþyngd') : null,
       same: lastWork && num(lastWork.reps) ? String(num(lastWork.reps)) : '', last: prevSame && stype !== 'warm' ? setTxtFull(prevSame) : '' };
     body = `
       ${draft.plan ? `<div class="planbar"><span class="pill">${esc(draft.plan.name)}</span><span class="pill">${GOALS[draft.plan.goal] ? GOALS[draft.plan.goal].name : ''}</span></div>` : ''}
@@ -788,39 +859,31 @@ function renderLift(){
           : `<button class="linkbtn sslink" data-act="ssopen">${LINKI} Para í súpersett</button>`}
       </div>
       ${planTargetBox(ex)}
+      ${kindRow(ex)}
       ${ex.t && ex.t.note && !ex.sets.length ? `<div class="tiny" style="margin:-4px 4px 10px">${esc(ex.t.note)}</div>` : ''}
       <section class="glass setcard ${stype !== 'normal' ? 'st-' + stype : ''}" aria-label="${stype === 'warm' ? 'Upphitunarsett' : `Sett ${wi}`}">
         <div class="row1"><b>${setLabel}</b>
           ${prevSame && stype !== 'warm' ? `<span class="lastpill"><span>Síðast </span>${setTxtFull(prevSame)}</span>` : (last.length && stype !== 'warm' ? `<span class="lastpill"><span>Síðast ${last.length} sett</span></span>` : '')}</div>
-        ${!editing && !dropping ? `<div class="stypes" role="group" aria-label="Tegund setts">${[['normal', 'Venjulegt'], ['drop', 'Drop'], ['warm', 'Upphitun'], ['fail', 'Til þrots']].map(([k, l]) =>
+        ${!editing && !dropping && !tm ? `<div class="stypes ${kind !== 'reps' ? 'n3' : ''}" role="group" aria-label="Tegund setts">${[['normal', 'Venjulegt'], ['drop', 'Drop'], ['warm', 'Upphitun'], ['fail', 'Til þrots']].filter(([k]) => k !== 'drop' || kind === 'reps').map(([k, l]) =>
           `<button data-act="settype" data-v="${k}" aria-pressed="${stype === k}" class="sty-${k}">${l}</button>`).join('')}</div>` : ''}
         ${dropping ? `<ul class="droprows"><li class="dr done"><span class="tg d">1</span><span>Byrjun</span><b>${setTxt(dropping)}</b>${CHECK}</li>
           ${dropping.drops.map((x, k) => `<li class="dr done"><span class="tg d">${k + 2}</span><span>Drop ${k + 1}</span><b>${setTxt(x)}</b>${CHECK}</li>`).join('')}
           <li class="dr cur"><span class="tg d">${dropping.drops.length + 2}</span><span>Drop ${dropping.drops.length + 1}</span><span class="tiny">${DROPI} léttara, engin hvíld</span></li></ul>` : ''}
-        <div class="stepper">
-          <button data-act="step" data-k="kg" data-d="-1" aria-label="Minnka þyngd">−</button>
-          <div class="val"><input data-cur="kg" data-kp="kg" data-kpid="c-kg" data-kpdock inputmode="${kpIm('decimal')}" autocomplete="off" aria-label="Þyngd í kg" value="${esc(cur.kg)}" placeholder="0"><div class="u">kg</div></div>
-          <button data-act="step" data-k="kg" data-d="1" aria-label="Auka þyngd">+</button>
-        </div>
-        <div class="divider"></div>
-        <div class="stepper">
-          <button data-act="step" data-k="reps" data-d="-1" aria-label="Færri reps">−</button>
-          <div class="val"><input data-cur="reps" data-kp="reps" data-kpid="c-reps" data-kpdock inputmode="${kpIm('numeric')}" autocomplete="off" aria-label="Endurtekningar" value="${esc(cur.reps)}" placeholder="0"><div class="u">reps</div></div>
-          <button data-act="step" data-k="reps" data-d="1" aria-label="Fleiri reps">+</button>
-        </div>
-        ${editing ? `<button class="bigbtn" data-act="doneset">Uppfæra sett</button>`
+        ${tm ? timedBox() : setInputs(kind, cur)}
+        ${tm ? '' : editing ? `<button class="bigbtn" data-act="doneset">Uppfæra sett</button>`
+          : kind === 'time' ? timedBtns(cur, stype, btnLabel, jl, next)
           : `<div class="setbtns">${jl ? `<button class="bigbtn logged" data-act="doneset" data-lbl="${esc(btnLabel)}" aria-live="polite">${CHECK} ${esc(justLogged.label)}</button>` : `<button class="bigbtn" data-act="doneset">${btnLabel}</button>`}
             ${dropping ? `<button class="bigbtn alt" data-act="dropend">Ljúka setti<small>${dropping.drops.length + 1} ${dropping.drops.length ? 'þyngdir' : 'þyngd'}</small></button>`
               : `<button class="bigbtn alt" data-act="donelast" aria-label="Skrá síðasta settið og ${next ? `fara í ${esc(next.name || exName(next.exId))}` : 'velja næstu æfingu'}">Næsta æfing →<small>${next ? esc(next.name || exName(next.exId)) : 'Velja æfingu'}</small></button>`}</div>`}
         ${editing ? `<button class="btn ghost block" data-act="canceledit">Hætta við breytingu</button>` : ''}
         ${g && !editing && !dropping ? `<div class="tiny ssnote">${gi < g.idx.length - 1 ? `Engin hvíld: næst kemur ${g.letter}${gi + 2} ${esc(exs[g.idx[gi + 1]].name || exName(exs[g.idx[gi + 1]].exId))}` : 'Hvíld eftir þetta sett, svo aftur í ' + g.letter + '1'}</div>` : ''}
       </section>
-      ${draft.lastSetAt && !dropping ? `<div class="rest glass" data-rest ${ex.t && ex.t.rest ? `data-target="${ex.t.rest}"` : ''}><span class="muted">Hvíld</span><b data-timer="rest"></b>${ex.t && ex.t.rest ? `<span class="tiny" data-resthint>af ${restTxt(ex.t.rest)}</span>` : ''}</div>` : ''}
+      ${draft.lastSetAt && !dropping && !tm ? `<div class="rest glass" data-rest ${ex.t && ex.t.rest ? `data-target="${ex.t.rest}"` : ''}><span class="muted">Hvíld</span><b data-timer="rest"></b>${ex.t && ex.t.rest ? `<span class="tiny" data-resthint>af ${restTxt(ex.t.rest)}</span>` : ''}</div>` : ''}
       ${ex.sets.length ? `<div class="donehint tiny">${PENCIL} Ýttu á sett til að laga þyngd eða endurtekningar</div>
       <ul class="done glass list" aria-label="Skráð sett, nýjasta efst">${(() => { let wn = 0; return ex.sets.map((st, i) => { const work = st.type !== 'warm'; if (work) wn++;
-        const c = work ? compare(st, last[wn - 1]) : null, tag = setTag(st, wn);
+        const c = work ? compare(st, last[wn - 1], ex) : null, tag = setTag(st, wn);
         return `<li class="${draft.editSet === i ? 'editing' : ''}${justLogged && justLogged.ei === draft.cur && justLogged.si === i && Date.now() - justLogged.at < 1100 ? ' fresh' : ''}${st.type ? ' t-' + st.type : ''}"><span class="sn">${tag}</span>
-          <button class="sv" data-act="editset" data-si="${i}" aria-label="Breyta ${work ? `setti ${wn}` : 'upphitunarsetti'}: ${setTxtFull(st)}">${setTxtFull(st, true)}<small>${draft.editSet === i ? 'Verið að breyta' : !work ? 'Upphitun, telst ekki í met' : st.type === 'fail' ? 'Til þrots' : last[wn - 1] ? `Síðast ${setTxtFull(last[wn - 1])}` : 'Ekkert sett síðast'}</small></button>
+          <button class="sv" data-act="editset" data-si="${i}" aria-label="Breyta ${work ? `setti ${wn}` : 'upphitunarsetti'}: ${setTxtFull(st)}">${setTxtFull(st, true)}${st.add != null && num(st.bw) ? ` <span class="bwk">${nf(num(st.kg), 2)} kg</span>` : ''}<small>${draft.editSet === i ? 'Verið að breyta' : !work ? 'Upphitun, telst ekki í met' : st.type === 'fail' ? 'Til þrots' : last[wn - 1] ? `Síðast ${setTxtFull(last[wn - 1])}` : 'Ekkert sett síðast'}</small></button>
           <span class="svpen" aria-hidden="true">${PENCIL}</span>
           <span class="cmp ${c && !c.up ? 'down' : ''}">${c ? c.t : ''}</span>
           <button class="xbtn" data-act="rmset" data-si="${i}" aria-label="Eyða setti">${ICON.x}</button></li>`; }).reverse().join(''); })()}</ul>` : ''}
@@ -854,6 +917,160 @@ function renderLift(){
     ${!isNewDraft() ? `<button class="btn ghost danger block" data-act="dellog">Eyða þessari æfingu</button>` : ''}
     </div></div>`;
 }
+/* ---------- Reitir setts eftir tegund æfingar (3.9) ---------- */
+const PLAYI = '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6L19 12z" fill="currentColor"/></svg>';
+const SWI = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 9.5v4l2.5 1.5M10 2.5h4"/></svg>';
+const SEC_PRESETS = [20, 30, 45, 60, 90, 120];
+function setInputs(kind, cur){
+  const reps = `<div class="stepper">
+          <button data-act="step" data-k="reps" data-d="-1" aria-label="Færri reps">−</button>
+          <div class="val"><input data-cur="reps" data-kp="reps" data-kpid="c-reps" data-kpdock inputmode="${kpIm('numeric')}" autocomplete="off" aria-label="Endurtekningar" value="${esc(cur.reps)}" placeholder="0"><div class="u">reps</div></div>
+          <button data-act="step" data-k="reps" data-d="1" aria-label="Fleiri reps">+</button>
+        </div>`;
+  if (kind === 'time'){ const v = parseSec(cur.sec);
+    return `<div class="stepper">
+          <button data-act="step" data-k="sec" data-d="-1" aria-label="Styttri tími">−</button>
+          <div class="val"><input data-cur="sec" inputmode="decimal" autocomplete="off" aria-label="Tími í mínútum og sekúndum" value="${esc(cur.sec)}" placeholder="0:30"><div class="u">mín:sek</div></div>
+          <button data-act="step" data-k="sec" data-d="1" aria-label="Lengri tími">+</button>
+        </div>
+        <div class="secpre" role="group" aria-label="Algengir tímar">${SEC_PRESETS.map(x => `<button data-act="secpre" data-v="${x}" aria-pressed="${v === x}">${secRaw(x)}</button>`).join('')}</div>`; }
+  if (kind === 'bw'){ const mode = cur.mode || 'body', as = mode === 'assist';
+    return `<div class="bwseg" role="group" aria-label="Eigin þyngd, aukaþyngd eða létting">${[['body', 'Eigin þyngd'], ['plus', '+ Aukaþyngd'], ['assist', '− Létting']].map(([k, l]) =>
+        `<button data-act="bwmode" data-v="${k}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div>
+        ${mode !== 'body' ? `<div class="stepper">
+          <button data-act="step" data-k="kg" data-d="-1" aria-label="${as ? 'Minni létting' : 'Minni aukaþyngd'}">−</button>
+          <div class="val"><input data-cur="kg" data-kp="kg" data-kpid="c-kg" data-kpdock inputmode="${kpIm('decimal')}" autocomplete="off" aria-label="${as ? 'Létting í kg' : 'Aukaþyngd í kg'}" value="${esc(cur.kg)}" placeholder="0"><div class="u">${as ? 'kg létting' : 'kg aukalega'}</div></div>
+          <button data-act="step" data-k="kg" data-d="1" aria-label="${as ? 'Meiri létting' : 'Meiri aukaþyngd'}">+</button>
+        </div>` : ''}
+        <div class="bwrow"><label for="bwin">Líkamsþyngd</label><span class="unitwrap"><input class="in" id="bwin" data-field="bwRaw" inputmode="decimal" autocomplete="off" placeholder="t.d. 80" value="${esc(draft.bwRaw || '')}"><span class="unit">kg</span></span>
+          <span class="bwtot" data-bwtot aria-live="polite">${bwTotHtml()}</span></div>
+        <div class="divider"></div>${reps}`; }
+  return `<div class="stepper">
+          <button data-act="step" data-k="kg" data-d="-1" aria-label="Minnka þyngd">−</button>
+          <div class="val"><input data-cur="kg" data-kp="kg" data-kpid="c-kg" data-kpdock inputmode="${kpIm('decimal')}" autocomplete="off" aria-label="Þyngd í kg" value="${esc(cur.kg)}" placeholder="0"><div class="u">kg</div></div>
+          <button data-act="step" data-k="kg" data-d="1" aria-label="Auka þyngd">+</button>
+        </div>
+        <div class="divider"></div>
+        ${reps}`;
+}
+/* Aukaþyngd/létting í reitunum sem tala (+ eða −) */
+const curAdd = c => { const m = (c && c.mode) || 'body'; return m === 'body' ? 0 : (num(c.kg) || 0) * (m === 'assist' ? -1 : 1); };
+function bwTotHtml(){
+  const ex = curEx(); if (!ex || !ex.cur) return '';
+  const a = curAdd(ex.cur), bw = num(draft.bwRaw);
+  if (!bw) return '<span class="tiny">Settu inn líkamsþyngd til að sjá heildarþyngdina</span>';
+  return `<span class="tiny">Heildarþyngd${a ? ` (${nf(bw, 2)} ${a < 0 ? '−' : '+'} ${nf(Math.abs(a), 2)})` : ''}</span><b>${nf(Math.max(0, bw + a), 2)} kg</b>`;
+}
+function paintBwTot(){ const el = view.querySelector('[data-bwtot]'); if (el) el.innerHTML = bwTotHtml(); }
+/* Eigin æfing: hvernig hún er skráð (þyngd og reps, eigin þyngd eða tími). Aðeins á meðan engin sett eru skráð. */
+function kindRow(ex){
+  const c = (state.customExercises || []).find(e => e.id === ex.exId);
+  if (!c || ex.sets.length) return '';
+  const k = exKind(ex);
+  return `<div class="kindrow"><span class="tiny">Skráð sem</span><div class="bwseg" role="group" aria-label="Hvernig æfingin er skráð">${[['reps', 'Þyngd og reps'], ['bw', 'Eigin þyngd'], ['time', 'Tími']].map(([v, l]) =>
+    `<button data-act="exkind" data-v="${v}" aria-pressed="${k === v}">${l}</button>`).join('')}</div></div>`;
+}
+function timedBtns(cur, stype, btnLabel, jl, next){
+  const v = parseSec(cur.sec), sw = stype === 'fail';
+  const go = sw ? `${SWI}<span class="gl">Taka tíma</span>` : `${PLAYI}<span class="gl">Telja niður${v ? ` ${secRaw(v)}` : ''}</span>`;
+  return `${jl ? `<button class="bigbtn logged" data-act="timedgo" aria-live="polite">${CHECK} ${esc(justLogged.label)}</button>` : `<button class="bigbtn go" data-act="timedgo">${go}</button>`}
+        ${sw ? '<div class="tiny tmhint">Skeiðklukka: haltu eins lengi og þú getur og ýttu á Stöðva þegar þú hættir.</div>' : ''}
+        <div class="setbtns"><button class="bigbtn alt" data-act="doneset">${esc(btnLabel)}<small data-tmman>${v ? `${fmtSec(v)}, án tímatöku` : 'Settu inn tíma'}</small></button>
+          <button class="bigbtn alt" data-act="donelast" aria-label="${next ? `Fara í ${esc(next.name || exName(next.exId))}` : 'Velja næstu æfingu'}">Næsta æfing →<small>${next ? esc(next.name || exName(next.exId)) : 'Velja æfingu'}</small></button></div>`;
+}
+function paintTimedLbl(){
+  const ex = curEx(); if (!ex || !ex.cur) return; const v = parseSec(ex.cur.sec);
+  const gl = view.querySelector('.bigbtn.go .gl'); if (gl && !/Taka/.test(gl.textContent)) gl.textContent = `Telja niður${v ? ` ${secRaw(v)}` : ''}`;
+  const m = view.querySelector('[data-tmman]'); if (m) m.textContent = v ? `${fmtSec(v)}, án tímatöku` : 'Settu inn tíma';
+  view.querySelectorAll('[data-act="secpre"]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === v)));
+}
+
+/* ---------- Niðurtalning og skeiðklukka í tímaæfingum ----------
+   draft.timed = { ei, at, lead, dur } (dur null = skeiðklukka). Tíminn er reiknaður út frá `at`, svo hann heldur
+   rétt áfram þótt skjárinn sé teiknaður upp á nýtt, appið fari í bakgrunn eða síðan sé opnuð aftur. */
+const TM_LEAD = 5;
+let timedIv = null, timedCue = '', actx = null, wakeLock = null;
+const soundOn = () => LS.get('aefingabokin.tmsound') !== 'off';
+function beep(freq, ms, vol = 0.2){
+  if (!soundOn()) return;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    actx = actx || new AC(); if (actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = 'sine'; o.frequency.value = freq; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + ms / 1000); o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + ms / 1000 + 0.03);
+  } catch(e){}
+}
+const buzz = p => { if (navigator.vibrate) try { navigator.vibrate(p); } catch(e){} };
+async function wakeOn(){ try { if ('wakeLock' in navigator && !wakeLock){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } } catch(e){} }
+function wakeOff(){ try { if (wakeLock) wakeLock.release(); } catch(e){} wakeLock = null; }
+function timedNow(){
+  const tm = draft && draft.timed; if (!tm) return null;
+  const now = Date.now(), t0 = tm.at + tm.lead * 1000, lead = now < t0, el = Math.max(0, (now - t0) / 1000);
+  return { tm, lead, leadLeft: (t0 - now) / 1000, el, left: tm.dur ? Math.max(0, tm.dur - el) : null };
+}
+function timedView(){
+  const n = timedNow(); if (!n) return null; const { tm } = n;
+  if (n.lead) return { cls: 'lead', lbl: 'Komdu þér í stöðu', t: String(Math.ceil(n.leadLeft)), sub: tm.dur ? `Svo ${fmtSec(tm.dur)}` : 'Svo fer skeiðklukkan af stað', p: (1 - n.leadLeft / tm.lead) * 100, btn: 'Byrja strax' };
+  if (!tm.dur) return { cls: 'run sw', lbl: 'Tími', t: secRaw(Math.floor(n.el)), sub: 'Ýttu á Stöðva þegar þú hættir', p: (n.el % 60) / 60 * 100, btn: 'Stöðva og skrá' };
+  const left = Math.ceil(n.left - 1e-6);
+  return { cls: `run${left <= 3 ? ' last' : ''}`, lbl: 'Eftir', t: secRaw(left), sub: `af ${fmtSec(tm.dur)}`, p: Math.min(100, n.el / tm.dur * 100), btn: 'Stöðva og skrá' };
+}
+function timedBox(){
+  const v = timedView() || { cls: '', lbl: '', t: '', sub: '', p: 0, btn: '' }, so = soundOn();
+  return `<div class="tmbox ${v.cls}" data-tm>
+          <div class="tmring" style="--p:${v.p.toFixed(1)}"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="tr" cx="60" cy="60" r="53"/><circle class="tp" cx="60" cy="60" r="53" pathLength="100"/></svg>
+            <div class="tmv" role="timer" aria-live="off"><span data-tml>${v.lbl}</span><b data-tmt>${v.t}</b><small data-tms>${v.sub}</small></div></div>
+          <div class="setbtns"><button class="bigbtn" data-act="timedstop" data-tmb>${v.btn}</button><button class="bigbtn alt" data-act="timedcancel">Hætta við</button></div>
+          <button class="linkbtn tmsnd" data-act="timedsound" aria-pressed="${so}">${so ? 'Hljóð á' : 'Hljóð af'}</button>
+        </div>`;
+}
+function timedPaint(){
+  const box = view.querySelector('[data-tm]'), v = timedView(); if (!box || !v) return;
+  box.className = `tmbox ${v.cls}`;
+  const set = (sel, txt) => { const el = box.querySelector(sel); if (el && el.textContent !== txt) el.textContent = txt; };
+  set('[data-tml]', v.lbl); set('[data-tmt]', v.t); set('[data-tms]', v.sub); set('[data-tmb]', v.btn);
+  const r = box.querySelector('.tmring'); if (r) r.style.setProperty('--p', v.p.toFixed(1));
+}
+function timedRun(){ if (!timedIv) timedIv = setInterval(timedTick, 100); }
+function timedHalt(){ clearInterval(timedIv); timedIv = null; timedCue = ''; wakeOff(); }
+function timedTick(){
+  const n = timedNow(); if (!n){ timedHalt(); return; }
+  const { tm } = n;
+  if (!n.lead && !tm.go){ tm.go = true; saveDraft(); if (n.el < 2){ beep(1320, 280); buzz(90); } }
+  const left = n.lead ? n.leadLeft : n.left, c = left != null ? Math.ceil(left - 1e-6) : 0, cue = `${n.lead ? 'l' : 'r'}${c}`;
+  if (left != null && c >= 1 && c <= 3 && cue !== timedCue){ timedCue = cue; beep(n.lead ? 660 : 880, 120); if (!n.lead) buzz(30); }
+  if (!n.lead && tm.dur && n.el >= tm.dur){ timedFinish(tm.dur, true); return; }
+  timedPaint();
+}
+function timedStart(){
+  const ex = curEx(); if (!ex || exKind(ex) !== 'time') return;
+  const sw = (draft.setType || 'normal') === 'fail', dur = sw ? null : parseSec(ex.cur.sec);
+  if (!sw && !dur) return toast('Settu inn tíma');
+  draft.editSet = null; draft.timed = { ei: draft.cur, at: Date.now(), lead: TM_LEAD, dur };
+  justLogged = null; beep(440, 1, 0.0002);   /* opnar hljóðið á meðan smellurinn er í gangi (vafrar leyfa ekki hljóð annars) */
+  wakeOn(); saveDraft(); render(); timedRun();
+}
+/* Lokið: sjálfkrafa þegar niðurtalningin klárast, eða „Stöðva og skrá“ (tíminn sem náðist er skráður) */
+function timedFinish(sec, auto){
+  const tm = draft && draft.timed; if (!tm) return;
+  draft.timed = null; timedHalt();
+  if (auto){ beep(1320, 600, 0.25); buzz([220, 90, 220]); }
+  if (!draft.exercises[tm.ei]){ saveDraft(); render(); return; }
+  draft.cur = tm.ei; draft.editSet = null; draft.editPrev = null;
+  const s = auto ? Math.round(sec) : Math.floor(sec + 1e-6);   /* stöðvað: heilar sekúndur sem náðust, eins og skeiðklukkan sýnir */
+  if (s < 1){ saveDraft(); render(); return toast('Of stutt til að skrá'); }
+  const ex = curEx(), name = ex.name || exName(ex.exId);
+  doneSet(s);
+  if (ui.tab !== 'log') toast(`${name}: ${fmtSec(s)} skráð`);
+}
+function timedStop(){
+  const n = timedNow(); if (!n) return;
+  if (n.lead){ n.tm.at = Date.now() - n.tm.lead * 1000; n.tm.go = true; beep(1320, 280); buzz(90); saveDraft(); timedPaint(); return; }   /* „Byrja strax“ */
+  timedFinish(n.tm.dur ? Math.min(n.el, n.tm.dur) : n.el, false);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && draft && draft.timed){ wakeOn(); timedTick(); } });
+
 function renderCardio(){
   const T = TYPES[draft.type] || TYPES.other, cfg = typeCfg(draft.type, draft.sub), f = cfg.fields, unit = cfg.unit;
   const has = k => f.includes(k);
@@ -1029,12 +1246,14 @@ function startDraft(type, existing){
 }
 function saveLog(){
   const d = draft;
+  if (d.timed) return toast('Stöðvaðu tímatökuna fyrst');
   const s = { id: d.id, profileId: d.profileId, type: d.type, date: d.date || today(),
     title: (d.title || '').trim() || null, notes: (d.notes || '').trim(), share: d.share || null,
     durationMin: parseDur(d.durRaw), createdAt: d.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(),
     createdBy: d.createdBy || me.uid };
   if (d.type === 'lift'){
-    s.exercises = d.exercises.map(e => ({exId: e.exId, name: e.name || exName(e.exId), sets: e.sets.map(st => ({kg: num(st.kg) ?? 0, reps: num(st.reps) ?? 0, ...(st.type && st.type !== 'normal' ? { type: st.type } : {}), ...((st.drops || []).length ? { drops: st.drops.map(x => ({ kg: num(x.kg) ?? 0, reps: num(x.reps) ?? 0 })) } : {})})), ...(e.ss ? { ss: e.ss } : {}), ...(e.t ? { t: { sets: e.t.sets, lo: e.t.lo, hi: e.t.hi, ...(e.t.reps != null ? { reps: e.t.reps } : {}), ...(e.t.rest != null ? { rest: e.t.rest } : {}), role: e.t.role || null, slot: e.t.slot || null } } : {})})).filter(e => e.sets.length);
+    s.exercises = d.exercises.map(e => ({exId: e.exId, name: e.name || exName(e.exId), sets: e.sets.map(st => ({...(st.sec != null ? { sec: Math.round(num(st.sec) || 0) } : { kg: num(st.kg) ?? 0, reps: num(st.reps) ?? 0 }),
+      ...(st.add != null ? { add: num(st.add) || 0 } : {}), ...(num(st.bw) ? { bw: num(st.bw) } : {}), ...(st.type && st.type !== 'normal' ? { type: st.type } : {}), ...((st.drops || []).length ? { drops: st.drops.map(x => ({ kg: num(x.kg) ?? 0, reps: num(x.reps) ?? 0 })) } : {})})), ...(e.ss ? { ss: e.ss } : {}), ...(e.t ? { t: { sets: e.t.sets, lo: e.t.lo, hi: e.t.hi, ...(e.t.reps != null ? { reps: e.t.reps } : {}), ...(e.t.rest != null ? { rest: e.t.rest } : {}), role: e.t.role || null, slot: e.t.slot || null } } : {})})).filter(e => e.sets.length);
     s.plan = d.plan || null;
     if (!s.exercises.length) return toast('Kláraðu að minnsta kosti eitt sett');
     s.spa = spaParsed(); if (!s.spa.length) s.spa = null;
@@ -1155,11 +1374,21 @@ function distStep(){
   if (t === 'bike') return 1; return 0.5;
 }
 const curEx = () => draft && draft.exercises && draft.exercises[draft.cur];
-function doneSet(){
+function doneSet(secDone){
   const ex = curEx(); if (!ex) return;
-  const kg = num(ex.cur.kg), reps = num(ex.cur.reps);
-  if (!reps) return toast('Settu inn fjölda reps');
-  const st = {kg: kg ?? 0, reps};
+  const kind = exKind(ex);
+  let st;
+  if (kind === 'time'){   /* secDone: tíminn úr niðurtalningu/skeiðklukku; reiturinn heldur áætluðum tíma fyrir næsta sett */
+    const sec = secDone != null ? secDone : parseSec(ex.cur.sec);
+    if (!sec) return toast('Settu inn tíma');
+    st = { sec };
+  } else {
+    const kg = num(ex.cur.kg), reps = num(ex.cur.reps);
+    if (!reps) return toast('Settu inn fjölda reps');
+    if (kind === 'bw'){ const a = Math.round(curAdd(ex.cur) * 100) / 100, bw = num(draft.bwRaw);
+      st = { kg: bw ? Math.max(0, Math.round((bw + a) * 100) / 100) : Math.max(0, a), reps, add: a, ...(bw ? { bw } : {}) }; }
+    else st = {kg: kg ?? 0, reps};
+  }
   if (draft.editSet != null){ const old = ex.sets[draft.editSet] || {}; ex.sets[draft.editSet] = { ...st, ...(old.type ? { type: old.type } : {}), ...(old.drops ? { drops: old.drops } : {}) }; draft.editSet = null; toast('Sett uppfært'); }
   else if (draft.dropOf != null && ex.sets[draft.dropOf]){
     /* Drop: léttari þyngd í sama setti, engin hvíld */
@@ -1168,7 +1397,7 @@ function doneSet(){
     ex.cur = { kg: fmtIn(dropKg(st.kg, ex.exId)), reps: String(st.reps) }; saveDraft(); render(); return;
   }
   else {
-    const t = draft.setType || 'normal';
+    const t = kind !== 'reps' && draft.setType === 'drop' ? 'normal' : (draft.setType || 'normal');   /* drop er aðeins í venjulegum lyftingum */
     if (t !== 'normal') st.type = t;
     if (t === 'drop'){ st.drops = []; ex.sets.push(st); draft.dropOf = ex.sets.length - 1;
       flashLogged(ex, 'Byrjun skráð', draft.dropOf); ex.cur = { kg: fmtIn(dropKg(st.kg, ex.exId)), reps: String(st.reps) }; saveDraft(); render(); return; }
@@ -1184,7 +1413,11 @@ function doneSet(){
 }
 /* Eftir vinnusett: hvíld hefst, eða í súpersetti farið beint í næstu æfingu hópsins */
 /* Næsta sett byrjar á sömu tölum og settið sem var skráð (í æfingaplani: sama þyngd og reps samkvæmt planinu) */
-const keptCur = (ex, st) => ({ kg: fmtIn(st.kg), reps: String(ex.t && ex.t.reps != null ? ex.t.reps : (st.reps ?? '')) });
+function keptCur(ex, st){
+  if (exKind(ex) === 'time') return { sec: ex.cur && ex.cur.sec ? ex.cur.sec : curOf(ex, st).sec };
+  const c = curOf(ex, st); if (ex.t && ex.t.reps != null) c.reps = String(ex.t.reps);
+  return c;
+}
 function afterWorkSet(ex, st){
   ex.cur = keptCur(ex, st);
   const g = ssGroup(draft.exercises, draft.cur);
@@ -1262,10 +1495,12 @@ function ssUnpair(){
 let justLogged = null, justLoggedT = null;
 function step(k, dir){
   const ex = curEx(); if (!ex) return;
+  if (k === 'sec'){ const v = parseSec(ex.cur.sec) || 0; ex.cur.sec = secRaw(snapStep(v, v >= 120 ? 15 : 5, dir));
+    const inp = view.querySelector('input[data-cur="sec"]'); if (inp) inp.value = ex.cur.sec; saveDraft(); paintTimedLbl(); return; }
   const v = num(ex.cur[k]) || 0, nv = snapStep(v, k === 'reps' ? 1 : kgIncOf(v), dir);
   ex.cur[k] = k === 'kg' ? fmtIn(nv) : String(nv);
   const inp = view.querySelector(`input[data-cur="${k}"]`); if (inp) inp.value = ex.cur[k];
-  saveDraft();
+  saveDraft(); if (k === 'kg') paintBwTot();
   if (kp) kp.sync();   /* fasta talnaborðið (opinn Fold) sýnir sömu tölu og plötur */
 }
 /* Næsta þrep upp eða niður: lendir alltaf á margfeldi af skrefinu (20 → 17,5 → 18 → 19 → 20, ekki 18,5 → 19,5 → 20,5) */
@@ -1289,7 +1524,7 @@ function kpCtx(inp){
     if (mode === 'reps') done = { label: L.editing ? 'Uppfæra' : 'Skrá', aria: L.btnLabel || 'Skrá sett' }; }
   else if (ex){ sub = `Sett ${+d.ssi + 1}`; const prev = ex.sets[+d.ssi - 1]; same = prev && num(prev.reps) ? String(num(prev.reps)) : ''; }
   if (mode === 'kg') done = { label: 'Næsta', aria: 'Næsta: endurtekningar' };
-  return { mode, title: mode === 'kg' ? 'Þyngd' : 'Endurtekningar', sub, exName: ex ? (ex.name || exName(ex.exId)) : '',
+  return { mode, title: mode === 'kg' ? ((d.cur && kpLift && kpLift.kgTitle) || 'Þyngd') : 'Endurtekningar', sub, exName: ex ? (ex.name || exName(ex.exId)) : '',
     inc: mode === 'kg' ? kgIncOf(num(inp.value) || 0) : 1, done, same: mode === 'reps' ? same : '', last,
     bar: ex && isBarbell(ex) ? barOf(ex) : null, plates: settings.plates, kgInput, kgVal: kgInput ? kgInput.value : '',
     pair: d.cur ? { kg: kgInput, reps: view.querySelector('input[data-cur="reps"]') } : null, persistent: d.kpdock != null };
@@ -1346,18 +1581,34 @@ function renderProgress(){
     else {
       if (!used.includes(ui.progEx)) ui.progEx = used[0];
       const h = liftHistory(ui.progEx), best = h.reduce((m, x) => x.best > m.best ? x : m, h[0]), totVol = h.reduce((a, x) => a + x.vol, 0);
-      body = `<label class="f" for="pex" style="margin-top:4px">Æfing</label>
-        <select class="in" id="pex">${used.map(id => `<option value="${esc(id)}" ${id === ui.progEx ? 'selected' : ''}>${esc(exName(id))}</option>`).join('')}</select>
-        <div class="chart glass">${lineChart(h.map(x => ({label: fmtShort(x.date), a: x.best, b: x.rm})))}</div>
-        <div class="legend"><span><i style="background:var(--c-lift)"></i>Þyngsta sett (kg)</span><span><i style="background:var(--ink-3)"></i>Áætlað 1RM</span></div>
+      const pkind = exKind({ exId: ui.progEx, name: exName(ui.progEx) }), bwk = pkind === 'bw';
+      const pick = `<label class="f" for="pex" style="margin-top:4px">Æfing</label>
+        <select class="in" id="pex">${used.map(id => `<option value="${esc(id)}" ${id === ui.progEx ? 'selected' : ''}>${esc(exName(id))}</option>`).join('')}</select>`;
+      if (pkind === 'time'){ const tot = h.reduce((a, x) => a + x.totSec, 0), nsets = h.reduce((a, x) => a + x.sets.length, 0);
+        body = `${pick}
+        <div class="chart glass">${lineChart(h.map(x => ({label: fmtShort(x.date), a: x.best, b: null})), { aria: 'Þróun tíma' })}</div>
+        <div class="legend"><span><i style="background:var(--c-lift)"></i>Lengsti tími í setti (sek)</span></div>
         <div class="kv">
-          <div class="glass"><div class="v">${nf(best.best, 1)} kg</div><div class="l">Þyngsta sett</div></div>
+          <div class="glass"><div class="v">${fmtSec(best.best)}</div><div class="l">Lengsti tími</div></div>
+          <div class="glass"><div class="v">${fmtSec(h[h.length - 1].best)}</div><div class="l">Síðast</div></div>
+          <div class="glass"><div class="v">${nf(nsets)}</div><div class="l">Sett samtals</div></div>
+          <div class="glass"><div class="v">${tot >= 3600 ? `${nf(tot / 3600, 1)} klst` : fmtSec(tot)}</div><div class="l">Samtals tími</div></div>
+        </div>
+        <div class="glass" style="margin-top:10px;overflow:hidden"><table class="tbl"><thead><tr><th>Dags.</th><th>Sett</th></tr></thead><tbody>
+          ${h.slice().reverse().slice(0, 8).map(x => `<tr><td>${fmtDate(x.date)}</td><td>${x.sets.map(setTxt).join(', ')}</td></tr>`).join('')}</tbody></table></div>`;
+      } else
+      body = `${pick}
+        <div class="chart glass">${lineChart(h.map(x => ({label: fmtShort(x.date), a: x.best, b: x.rm})))}</div>
+        <div class="legend"><span><i style="background:var(--c-lift)"></i>${bwk ? 'Mesta heildarþyngd (kg)' : 'Þyngsta sett (kg)'}</span><span><i style="background:var(--ink-3)"></i>Áætlað 1RM</span></div>
+        <div class="kv">
+          <div class="glass"><div class="v">${nf(best.best, 1)} kg</div><div class="l">${bwk ? 'Mesta heildarþyngd' : 'Þyngsta sett'}</div></div>
           <div class="glass"><div class="v">${nf(Math.max(...h.map(x => x.rm)), 1)} kg</div><div class="l">Áætlað 1RM</div></div>
           <div class="glass"><div class="v">${Math.max(...h.map(x => x.maxReps))}</div><div class="l">Flest reps í setti</div></div>
           <div class="glass"><div class="v">${totVol >= 10000 ? nf(totVol/1000, 1) + ' t' : nf(totVol) + ' kg'}</div><div class="l">Samtals lyft</div></div>
         </div>
         <div class="glass" style="margin-top:10px;overflow:hidden"><table class="tbl"><thead><tr><th>Dags.</th><th>Sett</th></tr></thead><tbody>
           ${h.slice().reverse().slice(0, 8).map(x => `<tr><td>${fmtDate(x.date)}</td><td>${x.sets.map(setTxt).join(', ')}</td></tr>`).join('')}</tbody></table></div>
+        ${bwk ? '<p class="tiny">Heildarþyngd er líkamsþyngd með aukaþyngd eða að frádreginni léttingu. Þannig sést framförin frá léttingu yfir í eigin þyngd og aukaþyngd.</p>' : ''}
         <p class="tiny">Áætlað 1RM er reiknað með Epley-formúlu út frá þyngd og reps. Gott til samanburðar milli vikna, ekki nákvæm tala.</p>`;
     }
   } else {
@@ -2087,11 +2338,13 @@ function exportTables(scope){
   const sets = {
     name: 'Sett', file: 'sett',
     cols: [['Dagsetning','date'],['Nafn','person'],['Æfing','exercise'],['Vöðvahópur','muscle_group'],['Sett nr.','set'],['Þyngd (kg)','weight_kg'],
-      ['Endurtekningar','reps'],['Rúmmál (kg)','volume_kg'],['Áætlað 1RM (kg)','est_1rm_kg'],['Auðkenni æfingar','session_id']],
+      ['Endurtekningar','reps'],['Rúmmál (kg)','volume_kg'],['Áætlað 1RM (kg)','est_1rm_kg'],['Auðkenni æfingar','session_id'],
+      ['Tími (sek)','seconds'],['Auka-/létting (kg)','added_kg'],['Líkamsþyngd (kg)','bodyweight_kg']],
     rows: sess.filter(s => s.type === 'lift').flatMap(s => (s.exercises || []).flatMap(e => {
       const ex = allEx().find(x => x.id === e.exId) || {};
       return e.sets.map((st, i) => { const kg = num(st.kg) ?? 0, reps = num(st.reps) ?? 0;
-        return [s.date, pname(s.profileId), e.name || ex.name || '', ex.g || '', i + 1, kg, reps, r2(kg * reps, 1), r2(e1rm(kg, reps), 1), s.id]; });
+        return [s.date, pname(s.profileId), e.name || ex.name || '', ex.g || '', i + 1, kg, reps, r2(kg * reps, 1), r2(e1rm(kg, reps), 1), s.id,
+          st.sec != null ? num(st.sec) : null, st.add != null ? num(st.add) : null, num(st.bw) || null]; });
     }))
   };
   const ms = measurements.slice().sort((a, b) => a.date.localeCompare(b.date));
@@ -2756,7 +3009,7 @@ function commentCard(){
 }
 
 /* ---------- Ábendingar ---------- */
-const APP_VERSION = '3.8';
+const APP_VERSION = '3.9';
 const FB_TYPES = { idea: { name: 'Hugmynd', desc: 'Viðbót eða breyting sem væri gaman að sjá', ph: 'T.d. væri gott að geta…' },
   bug: { name: 'Villa', desc: 'Eitthvað virkar ekki eins og það á að gera', ph: 'Hvað gerðist, og hvað áttirðu von á?' },
   other: { name: 'Annað', desc: 'Hrós, spurning eða annað', ph: 'Skrifaðu hér…' } };
@@ -3068,7 +3321,8 @@ let planSetup = null;
 /* Fyrri skipti æfingar hjá virka notandanum, nýjast fyrst */
 function planHist(id){
   return mySessions().filter(s => (s.exercises || []).some(e => e.exId === id)).sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '')).slice(0, 6)
-    .map(s => { const e = s.exercises.find(x => x.exId === id); return { date: s.date, sets: (e.sets || []).filter(st => st.type !== 'warm').map(st => ({ kg: num(st.kg) || 0, reps: num(st.reps) || 0 })), t: e.t || null }; });
+    .map(s => { const e = s.exercises.find(x => x.exId === id), bw = exKind(e) === 'bw';   /* eigin þyngd: framvinda í aukaþyngd */
+      return { date: s.date, sets: (e.sets || []).filter(st => st.type !== 'warm').map(st => ({ kg: bw ? addOf(e, st) : num(st.kg) || 0, reps: num(st.reps) || 0 })), t: e.t || null }; });
 }
 function planRecent(id){ const h = planHist(id)[0]; return h ? Math.round((parseYmd(today()) - parseYmd(h.date)) / 86400000) : null; }
 /* Hve langt síðan hver vöðvaflokkur var tekinn (til að mæla með næsta flokki) */
@@ -3163,7 +3417,7 @@ function startPlan(){
   startDraft('lift');
   draft.plan = { groups: P.opt.combo ? COMBOS[P.opt.combo].groups : P.opt.groups, combo: P.opt.combo || null, goal: P.opt.goal, level: P.opt.level, mins: P.opt.mins, name: planTitle(P.opt) };
   draft.exercises = P.items.map(x => ({ exId: x.exId, name: x.name, sets: [], t: { sets: x.sets, lo: x.lo, hi: x.hi, rest: x.rest, kg: x.kg, reps: x.reps, note: x.note, trend: x.trend, role: x.role, slot: x.slot },
-    cur: { kg: x.kg != null ? fmtIn(x.kg) : '', reps: String(x.reps) } }));
+    cur: exKind(x) === 'bw' ? { ...suggestion({ exId: x.exId, name: x.name, sets: [] }), reps: String(x.reps) } : { kg: x.kg != null ? fmtIn(x.kg) : '', reps: String(x.reps) } }));
   draft.cur = 0; ui.planPreview = null; saveDraft(); closeSheet();
   bump('totals', { plans: { [P.opt.combo || P.opt.groups.join('+')]: 1 }, planGoal: { [P.opt.goal]: 1 }, planLevel: { [P.opt.level]: 1 } });
   render(); window.scrollTo(0, 0);
@@ -3173,7 +3427,7 @@ function planTargetBox(ex){
   const wn = ex.sets.filter(st => st.type !== 'warm').length, done = wn >= t.sets;
   return `<div class="ptarget glass ${done ? 'done' : ''}"><div><span class="tiny">Markmið</span><b>${t.sets} × ${t.lo}–${t.hi}</b></div>
     ${t.rest ? `<div><span class="tiny">Hvíld</span><b>${restTxt(t.rest)}</b></div>` : ''}
-    <div><span class="tiny">Tillaga</span><b>${t.kg ? `${nf(t.kg, 1)} kg` : t.kg === 0 ? 'Eigin þyngd' : 'Finndu þyngd'}</b>${t.trend ? `<em class="up">${t.trend}</em>` : ''}</div>
+    <div><span class="tiny">Tillaga</span><b>${exKind(ex) === 'bw' ? (t.kg > 0 ? `+${nf(t.kg, 1)} kg` : 'Eigin þyngd') : t.kg ? `${nf(t.kg, 1)} kg` : t.kg === 0 ? 'Eigin þyngd' : 'Finndu þyngd'}</b>${t.trend ? `<em class="up">${t.trend}</em>` : ''}</div>
     <div class="pset">${done ? `${ICON.r} Öll ${t.sets} sett búin` : `Sett ${Math.min(wn + 1, t.sets)} af ${t.sets}`}</div></div>`;
 }
 
@@ -3788,6 +4042,7 @@ function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add
 
 function tick(){
   if (!draft || gate !== 'app') return;
+  if (draft.timed && !timedIv) timedRun();   /* niðurtalning heldur áfram eftir að appið er opnað aftur */
   if (kp) kp.tick();
   const sEl = view.querySelector('[data-timer="session"]'); if (sEl && draft.startedAt) sEl.textContent = fmtClock(Date.now() - draft.startedAt);
   const rEl = view.querySelector('[data-timer="rest"]');
@@ -3905,12 +4160,13 @@ document.addEventListener('click', async e => {
   const d = b.dataset;
   if (d.react !== undefined && b.closest('#reactPop')){ giveReact(d.react); return; }
   if (d.tab){ ui.tab = d.tab; render(); window.scrollTo(0, 0); return; }
-  if (d.pid){ if (d.pid !== state.active) nextFx = 'swap'; setActive(d.pid); if (draft && isNewDraft()){ draft.profileId = d.pid; (draft.exercises || []).forEach(x => { if (!x.sets.length) x.cur = suggestion(x); }); saveDraft(); } render(); return; }
+  if (d.pid){ if (d.pid !== state.active) nextFx = 'swap'; setActive(d.pid); if (draft && isNewDraft()){ draft.profileId = d.pid; draft.bwRaw = null; (draft.exercises || []).forEach(x => { if (!x.sets.length) x.cur = suggestion(x); }); saveDraft(); } render(); return; }
   if (d.newtype){ ui.moreOpen = false; startDraft(d.newtype); return; }
   if (d.edit){ const s = state.sessions.find(x => x.id === d.edit); if (s){ if (!okToDrop()) return; closeSheet(); if (s.profileId !== state.active) setActive(s.profileId); startDraft(s.type, s); } return; }
   if (d.wday){ const [pid, day] = d.wday.split('|'); openDay(pid, day); return; }
   if (d.pickex){ addExercise(d.pickex); return; }
   if (d.newex){ const name = d.newex.trim(); if (!name) return; const ex = {id: 'c_' + uid(), name, g: 'Mínar æfingar', custom: true};
+    const kind = guessKind(name); if (kind !== 'reps') ex.kind = kind;   /* t.d. „Hollow hold“ í tíma, „Upphífingar með teygju“ með eigin þyngd */
     state.customExercises.push(ex); Store.putExercise(hid, ex).catch(fail('Vistun æfingar'));
     bump('custom', { names: { [name.toLowerCase().slice(0, 40)]: 1 } }); addExercise(ex.id); return; }
   if (d.hf){ ui.histFilter = d.hf; render(); return; }
@@ -4090,9 +4346,17 @@ document.addEventListener('click', async e => {
     case 'ssunpair': ssUnpair(); break;
     case 'step': step(d.k, +d.d); break;
     case 'doneset': doneSet(); break;
+    case 'bwmode': { const ex = curEx(); if (!ex || !ex.cur) break; ex.cur.mode = d.v; if (d.v === 'body') ex.cur.kg = ''; saveDraft(); render(); break; }
+    case 'secpre': { const ex = curEx(); if (!ex || !ex.cur) break; ex.cur.sec = secRaw(+d.v); const inp = view.querySelector('input[data-cur="sec"]'); if (inp) inp.value = ex.cur.sec; saveDraft(); paintTimedLbl(); break; }
+    case 'timedgo': timedStart(); break;
+    case 'timedstop': timedStop(); break;
+    case 'timedcancel': draft.timed = null; timedHalt(); saveDraft(); render(); break;
+    case 'timedsound': { const on = !soundOn(); LS.set('aefingabokin.tmsound', on ? 'on' : 'off'); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Hljóð á' : 'Hljóð af'; if (on) beep(880, 90); break; }
+    case 'exkind': { const ex = curEx(), c = ex && (state.customExercises || []).find(e => e.id === ex.exId); if (!c || ex.sets.length || !['reps', 'bw', 'time'].includes(d.v)) break;
+      c.kind = d.v; Store.putExercise(hid, c).catch(fail('Vistun æfingar')); ex.cur = suggestion(ex); saveDraft(); render(); break; }
     case 'donelast': doneLast(); break;
     case 'editset': { if (draft.dropOf != null) endDropSilently(); const ex = curEx(), st = ex.sets[+d.si]; if (draft.editSet == null) draft.editPrev = { ...ex.cur };
-      draft.editSet = +d.si; ex.cur = {kg: fmtIn(st.kg), reps: String(st.reps)}; saveDraft(); render(); window.scrollTo(0, 0); break; }
+      draft.editSet = +d.si; ex.cur = curOf(ex, st); if (st.add != null && num(st.bw)) draft.bwRaw = fmtIn(st.bw); saveDraft(); render(); window.scrollTo(0, 0); break; }
     case 'canceledit': { const ex = curEx(); draft.editSet = null; ex.cur = draft.editPrev || suggestion(ex); draft.editPrev = null; saveDraft(); render(); break; }
     case 'editdropstop': break;
     case 'rmset': { const ex = curEx(); ex.sets.splice(+d.si, 1); if (draft.editSet != null) ex.cur = draft.editPrev || ex.cur;
@@ -4203,7 +4467,7 @@ setTimeout(measureTabs, 300);
 /* „Klára æfingu“: skráir settið ef tölur eru í reitunum, og fer svo í næstu æfingu (eða opnar val á næstu) */
 function doneLast(){
   const ex = curEx(); if (!ex) return;
-  if (num(ex.cur.reps)){ const n = ex.sets.length; doneSet(); if (ex.sets.length === n) return; }
+  if (exKind(ex) !== 'time' && num(ex.cur.reps)){ const n = ex.sets.length; doneSet(); if (ex.sets.length === n) return; }
   else if (!ex.sets.length) return toast('Skráðu að minnsta kosti eitt sett fyrst');
   draft.editSet = null; if (draft.dropOf != null) endDropSilently();
   const g = ssGroup(draft.exercises, draft.cur); if (g) draft.cur = g.idx[g.idx.length - 1];
@@ -4252,7 +4516,7 @@ document.addEventListener('input', e => {
   const t = e.target;
   if (t.id === 'cmtext'){ updateCount(); return; }
   if (t.id === 'fbtext'){ fbDraft.text = t.value; const c = $('#fbcount'); if (c) c.textContent = `${t.value.length} / 1500`; const b = $('[data-act="fbsend"]'); if (b) b.disabled = !t.value.trim(); return; } if (!draft || !view.contains(t)) return;
-  if (t.dataset.cur){ const ex = curEx(); if (ex){ ex.cur[t.dataset.cur] = t.value; saveDraft(); } return; }
+  if (t.dataset.cur){ const ex = curEx(); if (ex){ ex.cur[t.dataset.cur] = t.value; saveDraft(); if (t.dataset.cur === 'kg') paintBwTot(); if (t.dataset.cur === 'sec') paintTimedLbl(); } return; }
   if (t.dataset.sei != null){ const ex = (draft.exercises || [])[+t.dataset.sei]; if (ex && ex.sets[+t.dataset.ssi]){ ex.sets[+t.dataset.ssi][t.dataset.sk] = t.value; saveDraft(); } return; }
   if (t.dataset.spa != null){ const x = (draft.spa || [])[+t.dataset.spa]; if (x){ x.raw = t.value; saveDraft(); updatePace(); } return; }
   if (t.dataset.cd != null){ const x = (draft.cardio || [])[+t.dataset.cd]; if (x){ x.raw = t.value; saveDraft(); cardioLongUpdate(); } return; }
@@ -4260,6 +4524,7 @@ document.addEventListener('input', e => {
   if (t.dataset.cdc != null){ const x = (draft.cardio || [])[+t.dataset.cdc]; if (x){ x.kcalRaw = t.value; saveDraft(); } return; }
   const f = t.dataset.field; if (!f) return;
   if (f === 'distance'){ draft.distRaw = t.value; document.querySelectorAll('[data-act="distpre"]').forEach(x => x.setAttribute('aria-pressed', String(+x.dataset.v === num(t.value)))); } else if (f === 'dur') draft.durRaw = t.value; else if (f === 'hr') draft.hrRaw = t.value; else draft[f] = t.value;
+  if (f === 'bwRaw') paintBwTot();
   if (f === 'course' && draft.type === 'golf' && !num(draft.par)){
     const prev = state.sessions.filter(x => x.type === 'golf' && x.sub === draft.sub && x.par && (x.course || '').toLowerCase() === t.value.trim().toLowerCase()).sort(byDateDesc)[0];
     if (prev){ draft.par = String(prev.par); const pi = $('#cf_par'); if (pi) pi.value = draft.par; }
@@ -4269,6 +4534,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => {
   const t = e.target, d = t.dataset || {};
   if (t.id === 'pex'){ ui.progEx = t.value; render(); return; }
+  if (d.cur === 'sec' && draft){ const v = parseSec(t.value), ex = curEx(); if (v != null && ex && ex.cur){ ex.cur.sec = t.value = secRaw(v); saveDraft(); paintTimedLbl(); } return; }
   if (d.impi != null && importState){ importState.items[+d.impi].pick = t.checked; const n = importState.items.filter(x => x.pick).length;
     const go = $('[data-act="impgo"]'); if (go){ go.disabled = !n; go.textContent = `Lesa inn ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'æfingu' : 'æfingar'}`; } return; }
   if (d.settoggle){ setSetting(d.settoggle, t.checked ? d.on : d.off); return; }
@@ -4315,7 +4581,7 @@ function openShortcuts(){
 /* ---------- Nýtt í appinu ----------
    Birtist einu sinni eftir uppfærslu hjá þeim sem hafa notað appið áður (ekki nýjum notendum).
    Séð útgáfa vistast í stillingum notandans, svo kynningin kemur ekki aftur á öðru tæki. */
-const NEWS = '3.7';
+const NEWS = '3.9';
 const NW_FOLD = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M12 4v16"/></svg>';
 const NW_GEAR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>';
 function maybeShowNews(){
@@ -4326,21 +4592,21 @@ function maybeShowNews(){
   if (used) openNews();
 }
 function openNews(){
-  const touch = !!(kp && kp.active());
   const row = (ic, t, d) => `<li><span class="nwi" aria-hidden="true">${ic}</span><span><b>${t}</b><span class="tiny">${d}</span></span></li>`;
-  const keys = ['7', '8', '9', '−2,5', '4', '5', '6', '+2,5'].map((k, i) => `<i class="${i % 4 === 3 ? 'st' : ''}">${k}</i>`).join('');
   openSheet('Nýtt í Æfingabókinni', `<div class="news">
-    <div class="nwhero" aria-hidden="true">${barHtml([20, 10, 2.5], 'big')}<div class="nwkeys">${keys}<i class="go">Næsta</i></div></div>
+    <div class="nwhero nw39" aria-hidden="true">
+      <div class="tmring" style="--p:62"><svg viewBox="0 0 120 120"><circle class="tr" cx="60" cy="60" r="53"/><circle class="tp" cx="60" cy="60" r="53" pathLength="100"/></svg>
+        <div class="tmv"><span>Eftir</span><b>0:17</b></div></div>
+      <div class="nwbw"><span>80 kg</span><span>− 20 kg létting</span><b>60 kg</b></div></div>
     <p class="nwver">Útgáfa ${NEWS}</p>
-    <h3 class="nwh">Talnaborð appsins</h3>
-    <p class="nwlead">Þegar þú skráir þyngd og endurtekningar opnast nú talnaborð appsins í stað lyklaborðs símans. Það er alltaf eins, með kommu, og hylur ekki settin.</p>
+    <h3 class="nwh">Planki og upphífingar</h3>
+    <p class="nwlead">Nú er hægt að skrá æfingar sem eru haldnar í tíma, og upphífingar og dýfur með eigin þyngd, aukaþyngd eða léttingu.</p>
     <ul class="nwlist">
-      ${row('±', 'Skref, Næsta og Skrá', '−2,5 og +2,5 breyta þyngdinni. „Næsta“ fer úr þyngd í endurtekningar og „Skrá“ skráir settið. „Sama“ setur sama fjölda og í síðasta setti.')}
-      ${row(`<i class="pdot pc-red"></i>`, 'Plötur á stöng', 'Í æfingum með stöng sérðu hvaða plötur fara á hvora hlið, í litum platnanna. Ýttu á „Stöng 20 kg“ til að velja aðra stöng fyrir æfinguna.')}
-      ${row(NW_FOLD, 'Opinn Fold og Flex-hamur', 'Á opnum skjá situr talnaborðið til hliðar svo ekkert hylur settin. Hálfopinn á bekknum: settið efst og talnaborðið neðst.')}
-      ${row(NW_GEAR, 'Þú ræður', 'Í Stillingum undir Skráning velur þú plöturnar í ræktinni og þyngd stangar, eða slekkur á talnaborðinu.')}
+      ${row(PLAYI, 'Planki með niðurtalningu', 'Veldu tíma og ýttu á „Telja niður“. Þú færð 5 sekúndur til að koma þér í stöðu, píp síðustu þrjár sekúndurnar og settið skráist sjálft. Líka hliðarplanki, dauðahang og veggseta.')}
+      ${row(SWI, 'Eða skráðu tímann sjálf(ur)', '„Skrá sett“ skráir tímann í reitnum án tímatöku. Í „Til þrots“ verður niðurtalningin að skeiðklukku sem þú stöðvar þegar þú hættir.')}
+      ${row('±', 'Upphífingar og dýfur', 'Veldu Eigin þyngd, + Aukaþyngd eða − Létting. Appið reiknar heildarþyngdina út frá líkamsþyngdinni: 80 kg með 20 kg léttingu eru 60 kg.')}
+      ${row(NW_GEAR, 'Framfarir og eigin æfingar', 'Heildarþyngdin fer í línuritið, svo þú sérð leiðina frá léttingu yfir í aukaþyngd. Eigin æfingu má skrá sem tíma eða eigin þyngd.')}
     </ul>
-    ${touch ? '' : '<p class="tiny nwnote">Talnaborðið birtist í símum og spjaldtölvum með snertiskjá.</p>'}
     <button class="btn primary block nwok" data-act="newsok">Í lagi</button></div>`);
 }
 

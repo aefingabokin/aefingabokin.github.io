@@ -30,7 +30,23 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.8, CACHE v65)
+## Staða (útgáfa 3.9, CACHE v66)
+3.9: tímaæfingar (planki) og eigin þyngd (upphífingar, dýfur).
+- `exKind(ex)` í `ui.js`: `'time'` (`KIND_TIME`: Planki, Hliðarplanki, Dauðahang, Veggseta), `'bw'` (`KIND_BW`: Upphífingar,
+  Hökulyftur, Dýfur og „með aðstoð“-útgáfurnar) eða `'reps'`. Eigin æfingar fá `kind` af heitinu (`guessKind`) og má breyta
+  („Skráð sem“ á meðan engin sett eru skráð). Nýjar tímaæfingar eru ekki í `EXMETA`, svo þær fara ekki í æfingaplön.
+- Tímasett: `{ sec }`. Reiturinn er m:ss (`parseSec`: „1:30“/„1.30“ = 90, „1,5“ = 1,5 mín, „45“ = 45 sek), fljótval 0:20–2:00.
+  „Telja niður“: `draft.timed = { ei, at, lead: 5, dur }`, reiknað út frá `at` (heldur áfram eftir endurræsingu), píp síðustu
+  3 sek (Web Audio, „Hljóð á/af“ í `aefingabokin.tmsound`), titringur, Wake Lock. Skráist sjálft við 0; „Stöðva og skrá“ skráir
+  heilar sekúndur sem náðust. „Til þrots“ = skeiðklukka (`dur: null`). Reiturinn heldur áætluðum tíma fyrir næsta sett.
+- Eigin þyngd: `{ kg: heildarþyngd, reps, add: +/− kg, bw: líkamsþyngd }`. `kg` er heildarþyngdin svo met, rúmmál, 1RM og línurit
+  virka óbreytt. Líkamsþyngd (`draft.bwRaw`) kemur úr nýjustu mælingu eða síðasta setti (`bwGuess`). Eldri sett án `add`:
+  `addOf` túlkar kg sem aukaþyngd, eða léttingu í æfingum „með aðstoð“. Samanburður og æfingaplan miða við `add`.
+- `realSet` (reps eða sek, ekki upphitun) kemur í stað `num(st.reps)` í talningu, sögu og „Síðast“. Drop er ekki í boði í
+  tímaæfingum og eigin þyngd. Útflutningur setta fékk dálkana Tími (sek), Auka-/létting og Líkamsþyngd aftast.
+- „Nýtt í Æfingabókinni“ (`NEWS = '3.9'`) kynnir þetta. Prófanir: 36 af 39 (`dev/test-timed.mjs` nýtt, 41 atriði).
+- Ekki gert: tímaæfingar í CrossFit-styrktarhluta (`strengthEditor` er enn kg/reps); talnaborð appsins í tímareit (bíður, sjá Hugmyndir).
+
 3.8: yfirferð á fagmennsku, hreyfing og talnasnið.
 - Hreyfing (kaflinn „Hreyfing (3.8)“ neðst í stílunum, breytur `--e-out`, `--e-io`, `--e-in`, `--e-spring`): gluggar renna
   upp/niður og bakgrunnur dofnar (`.sheet` er nú alltaf `display:flex`, falinn með `visibility` + `translate`); dregið niður

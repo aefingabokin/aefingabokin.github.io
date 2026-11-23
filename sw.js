@@ -1,7 +1,7 @@
 /* Service worker: appið opnast án nets og bíður ekki eftir lélegu neti.
    Eigin skrár: net fyrst, en afritið tekur við ef netið svarar ekki innan NET_WAIT (ræktin í kjallara) eða er úti.
    Firebase-kóðinn, Excel-hlutinn og letrið: afrit fyrst (útgáfurnar eru festar) og fylgja með milli útgáfa. */
-const CACHE = 'aefingabokin-v65';
+const CACHE = 'aefingabokin-v66';
 const SHELL = ['./', './index.html', './js/main.js', './js/ui.js', './js/store.js', './js/settings.js', './js/importers.js', './js/pools.js', './js/coach.js', './js/keypad.js', './js/i18n.js', './js/firebase-config.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'];
 
