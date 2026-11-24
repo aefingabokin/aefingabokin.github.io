@@ -3066,7 +3066,7 @@ function commentCard(){
 }
 
 /* ---------- Ábendingar ---------- */
-const APP_VERSION = '3.10';
+const APP_VERSION = '3.10.1';
 const FB_TYPES = { idea: { name: 'Hugmynd', desc: 'Viðbót eða breyting sem væri gaman að sjá', ph: 'T.d. væri gott að geta…' },
   bug: { name: 'Villa', desc: 'Eitthvað virkar ekki eins og það á að gera', ph: 'Hvað gerðist, og hvað áttirðu von á?' },
   other: { name: 'Annað', desc: 'Hrós, spurning eða annað', ph: 'Skrifaðu hér…' } };
@@ -3857,7 +3857,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape'){ if (documen
 
 function openExPicker(){
   const warmFirst = draft && draft.type === 'lift' && !(draft.exercises || []).length && !(draft.cardio || []).some(x => x.when === 'pre');
-  openSheet('Veldu æfingu', `${warmFirst ? `<button class="btn ghost block cdfirst" data-act="cdfirst">${sportIcon('bike', 18)}<span>Byrja á upphitun á þrektæki</span></button>` : ''}<input class="in" id="exq" placeholder="Leita á íslensku eða ensku, t.d. lat pulldown" autocomplete="off"><div id="exlist"></div>`);
+  openSheet('Veldu æfingu', `${warmFirst ? `<button class="cdfirst" data-act="cdfirst"><i class="cdi">${sportIcon('bike', 20)}</i><span>Byrja á upphitun á þrektæki</span><svg class="cdchev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>` : ''}<input class="in" id="exq" placeholder="Leita á íslensku eða ensku, t.d. lat pulldown" autocomplete="off"><div id="exlist"></div>`);
   const q = $('#exq');
   const draw = () => {
     const term = q.value.trim().toLowerCase(), pid = draft ? draft.profileId : state.active;

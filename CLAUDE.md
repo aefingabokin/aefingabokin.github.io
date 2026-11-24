@@ -30,8 +30,10 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.10, CACHE v67)
-3.10: teygjur eftir æfingu.
+## Staða (útgáfa 3.10.1, CACHE v68)
+3.10.1: „Byrja á upphitun á þrektæki“ efst í „Veldu æfingu“ er áberandi spjald (`.cdfirst`, litur `--c-bike`, tákn í hring, ör).
+
+3.10 (CACHE v67): teygjur eftir æfingu.
 - Í hlutanum „Eftir æfinguna“ (`spaEditor`, með gufu og pottum) er „+ Teygjur“ fremst. Vistað sem `s.stretch = { min }`
   (`min` null ef tíminn er tómur). Tillaga að tíma er síðasti teygjutími (`lastStretchMin`, annars 10). Ekki í boði eftir jóga.
 - Teygjur birtast fremst í gufu/potta-merkjunum (`spaPills(totals, stretch)`), líka hjá vinum (`sharedOf` sendir `stretch`

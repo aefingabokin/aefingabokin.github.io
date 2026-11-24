@@ -1081,7 +1081,12 @@ button.wbtn.wc-dots, button.wbtn.wc-tiles, button.wbtn.wc-rings{border:0;padding
 .cdquick .cdsame{align-self:flex-start;max-width:100%;white-space:normal;text-align:left}
 .cdquick .cdpre{align-self:flex-start;font-size:13px;min-height:32px;padding:2px 0}
 .cded .cdlong{padding:0 16px 8px}
-.cdfirst{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 10px}
+.cdfirst{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 14px;padding:12px 14px;min-height:60px;border-radius:18px;text-align:left;
+  border:1.5px solid color-mix(in srgb, var(--c-bike) 55%, transparent);background:color-mix(in srgb, var(--c-bike) 14%, transparent);color:var(--ink);font-weight:700;font-size:16px}
+.cdfirst .cdi{flex:none;width:38px;height:38px;border-radius:19px;display:grid;place-items:center;background:var(--c-bike);color:var(--bg-base)}
+.cdfirst span{flex:1;min-width:0}
+.cdfirst .cdchev{flex:none;opacity:.7}
+.cdfirst:active{transform:scale(.98)}
 
 /* + og − má halda inni: ekkert val á texta eða valmynd við langa snertingu */
 button[data-act="step"], button[data-act="diststep"], button[data-act="spastep"]{touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
