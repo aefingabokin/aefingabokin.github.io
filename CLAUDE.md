@@ -30,8 +30,15 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
-## Staða (útgáfa 3.10.1, CACHE v68)
-3.10.1: „Byrja á upphitun á þrektæki“ efst í „Veldu æfingu“ er áberandi spjald (`.cdfirst`, litur `--c-bike`, tákn í hring, ör).
+## Staða (útgáfa 3.11, CACHE v69)
+3.11: deilimynd vikunnar og ársins í þremur útlitum sem notandinn velur á milli (`sharePicker`, smámyndir teiknaðar með `paintSharePicks`,
+valið í localStorage `aefingabokin.sharestyle`). `drawShare(S, style)` teiknar 1080 × 1920:
+- `days`: dagar vikunnar (mánuðir ársins) í lit ríkjandi íþróttar, stærsta talan með samanburði (`shareHero`: steypireyðar, fílar, fólksbílar, maraþon, hringvegurinn).
+- `best`: hringur (`shareRing`: vikumarkmið ef til, annars dagar af 7, vikur á árinu) og met tímabilsins (`shareHighlight`: þyngsta sett miðað við fyrri æfingar, CrossFit PB, golfmet; annars lengsta æfingin).
+- `poster`: risatala á mettuðum lit ríkjandi íþróttar (`deepRgb`, virkar með öllum litaspjöldum).
+Próf: dev/test-share.mjs.
+
+3.10.1 (CACHE v68): „Byrja á upphitun á þrektæki“ efst í „Veldu æfingu“ er áberandi spjald (`.cdfirst`, litur `--c-bike`, tákn í hring, ör).
 
 3.10 (CACHE v67): teygjur eftir æfingu.
 - Í hlutanum „Eftir æfinguna“ (`spaEditor`, með gufu og pottum) er „+ Teygjur“ fremst. Vistað sem `s.stretch = { min }`

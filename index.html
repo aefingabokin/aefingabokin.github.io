@@ -1401,6 +1401,14 @@ button, a, summary, label, input, select, textarea{-webkit-tap-highlight-color:t
 .tmsnd{font-size:13px;margin-top:-6px}
 @media (prefers-reduced-motion: reduce){.tmbox, .tmbox.last .tmv b{animation:none}.tmring .tp, .bwseg button{transition:none}}
 
+/* Útlit á deilimynd (3.11): þrjú útlit með smámynd */
+.shpicklbl{margin:18px 0 0}
+.shpick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 14px}
+.shpick button{background:none;border:2px solid transparent;border-radius:18px;padding:5px 5px 8px;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--ink-2);font-weight:700;font-size:14px;font-family:inherit}
+.shpick button[aria-checked="true"]{border-color:var(--ink);color:var(--ink)}
+.shth{display:block;width:100%;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:var(--glass)}
+.shth img{display:block;width:100%;height:100%}
+
 /* Teygjur eftir æfingar (3.10) */
 .sthint{display:flex;align-items:center;gap:6px;padding:0 16px 12px}.sthint svg{width:14px;height:14px;color:var(--c-yoga);flex:none}
 .stcard{padding:16px;margin-top:12px;display:flex;flex-direction:column;gap:10px}

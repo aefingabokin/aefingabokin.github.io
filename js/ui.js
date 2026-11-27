@@ -3066,7 +3066,7 @@ function commentCard(){
 }
 
 /* ---------- Ábendingar ---------- */
-const APP_VERSION = '3.10.1';
+const APP_VERSION = '3.11';
 const FB_TYPES = { idea: { name: 'Hugmynd', desc: 'Viðbót eða breyting sem væri gaman að sjá', ph: 'T.d. væri gott að geta…' },
   bug: { name: 'Villa', desc: 'Eitthvað virkar ekki eins og það á að gera', ph: 'Hvað gerðist, og hvað áttirðu von á?' },
   other: { name: 'Annað', desc: 'Hrós, spurning eða annað', ph: 'Skrifaðu hér…' } };
@@ -3568,7 +3568,7 @@ function openSummary(){
   const w = summaryWeek() || (() => { const ws = addDays(weekStart(new Date()), -7); return { from: ymd(ws), to: ymd(addDays(ws, 6)), prevFrom: ymd(addDays(ws, -7)), prevTo: ymd(addDays(ws, -1)), last: true }; })();
   const d = periodData(w.from, w.to), p = periodData(w.prevFrom, w.prevTo), streak = weekStreak();
   const diff = p.mins ? Math.round((d.mins - p.mins) / p.mins * 100) : null;
-  ui.share = { kind: 'week', title: w.last ? 'Síðasta vika' : 'Vikan mín', sub: `${fmtDate(w.from)} – ${fmtDate(w.to)}`, d, streak };
+  ui.share = { kind: 'week', title: w.last ? 'Síðasta vika' : 'Vikan mín', sub: `${fmtDate(w.from)} – ${fmtDate(w.to)}`, from: w.from, to: w.to, d, streak };
   openSheet(w.last ? 'Síðasta vika í hnotskurn' : 'Vikan þín í hnotskurn', `<p class="tiny" style="margin-top:0">${fmtDate(w.from)} – ${fmtDate(w.to)}</p>
     <div class="kv">
       <div class="glass"><div class="v">${d.n}</div><div class="l">Æfingar</div><div class="tiny">${d.days} ${d.days === 1 ? 'dagur' : 'dagar'} með hreyfingu</div></div>
@@ -3579,8 +3579,9 @@ function openSummary(){
       ${d.pbs ? `<div class="glass"><div class="v">${d.pbs}</div><div class="l">Met</div></div>` : ''}
     </div>
     ${d.types.length ? `<h2>Íþróttirnar</h2>${barsList(d.types)}` : ''}
-    <button class="cta" data-act="sharecard">Deila sem mynd</button>
+    ${sharePicker()}<button class="cta" data-act="sharecard">Deila sem mynd</button>
     <p class="tiny" style="text-align:center">Myndin passar fyrir Instagram Story og aðra miðla.</p>`);
+  paintSharePicks();
 }
 const barsList = types => { const max = types[0][1]; return `<ul class="sumbars">${types.slice(0, 5).map(([k, n]) => `<li><span>${TYPES[k].name}</span><span class="mbar"><i style="width:${n / max * 100}%;background:${tc(k)}"></i></span><b>${n}</b></li>`).join('')}</ul>`; };
 function openYear(year){
@@ -3589,7 +3590,7 @@ function openYear(year){
   const months = Array(12).fill(0); d.ss.forEach(s => months[+s.date.slice(5, 7) - 1]++);
   const bestM = months.indexOf(Math.max(...months));
   const capM = MONFULL[bestM].charAt(0).toUpperCase() + MONFULL[bestM].slice(1);
-  ui.share = { kind: 'year', title: `Árið mitt ${y}`, sub: 'Æfingabókin', d, best: capM, streak: weekStreak() };
+  ui.share = { kind: 'year', title: `Árið mitt ${y}`, sub: y < new Date().getFullYear() ? 'janúar – desember' : `1. jan. – ${fmtDate(today())}`, from: `${y}-01-01`, to: `${y}-12-31`, d, best: capM, streak: weekStreak() };
   openSheet(`Árið þitt ${y}`, `<div class="kv">
       <div class="glass"><div class="v">${d.n}</div><div class="l">Æfingar</div></div>
       <div class="glass"><div class="v">${nf(d.mins / 60, 0)}</div><div class="l">Klukkustundir</div></div>
@@ -3602,34 +3603,196 @@ function openYear(year){
     </div>
     <h2>Mánuðirnir</h2><div class="ymonths">${months.map((n, i) => `<span><i style="height:${Math.max(3, n / Math.max(1, ...months) * 60)}px"></i><small>${MON[i].slice(0, 3)}</small></span>`).join('')}</div>
     <h2>Íþróttirnar</h2>${barsList(d.types)}
-    <button class="cta" data-act="sharecard">Deila sem mynd</button>`);
+    ${sharePicker()}<button class="cta" data-act="sharecard">Deila sem mynd</button>`);
+  paintSharePicks();
 }
-/* Mynd fyrir Instagram Story (1080 × 1920) teiknuð á canvas */
+/* Mynd fyrir Instagram Story (1080 × 1920) teiknuð á canvas, í þremur útlitum sem notandinn velur á milli:
+   days = dagarnir (eða mánuðirnir) og stærsta talan sett í samhengi, best = hringur og met vikunnar, poster = ein risatala á lit íþróttarinnar */
+const SHARE_STYLES = [['days', 'Dagarnir'], ['best', 'Hápunktur'], ['poster', 'Plakat']];
+const SHARE_KEY = 'aefingabokin.sharestyle';
+function shareStyle(){
+  let v = ui.shareStyle; if (!v) try { v = localStorage.getItem(SHARE_KEY); } catch(e){}
+  return SHARE_STYLES.some(x => x[0] === v) ? v : 'days';
+}
+const sharePicker = () => `<p class="tiny shpicklbl">Veldu útlit á myndinni</p><div class="shpick" role="radiogroup" aria-label="Útlit myndar">${SHARE_STYLES.map(([k, l]) =>
+  `<button role="radio" data-act="sharestyle" data-k="${k}" aria-checked="${shareStyle() === k}"><span class="shth" data-shth="${k}"></span><span>${l}</span></button>`).join('')}</div>`;
+async function shareFonts(){ try { if (document.fonts && document.fonts.load) await Promise.all(['800 100px', '700 40px', '600 40px'].map(f => document.fonts.load(`${f} "Plus Jakarta Sans"`))); } catch(e){} }
+async function paintSharePicks(){
+  const S = ui.share; if (!S) return; await shareFonts();
+  for (const [k] of SHARE_STYLES){
+    const slot = document.querySelector(`[data-shth="${k}"]`); if (!slot || ui.share !== S) return;
+    const c = drawShare(S, k); if (!c) return;
+    const t = document.createElement('canvas'); t.width = 270; t.height = 480; const tg = t.getContext('2d'); if (!tg) return;
+    tg.drawImage(c, 0, 0, 270, 480);
+    const img = new Image(); img.alt = ''; img.src = t.toDataURL('image/jpeg', 0.85); slot.replaceChildren(img);
+    await new Promise(r => setTimeout(r, 0));
+  }
+}
+/* Litir íþrótta á dökkum grunni: ljós útgáfa af lit notandans (hvaða litaspjald sem er), og djúp útgáfa fyrir plakatið */
+function shareRgb(k){
+  let m = null;
+  try { const el = document.createElement('i'); el.style.color = `var(--c-${TYPES[k] ? k : 'other'})`; document.body.appendChild(el); m = getComputedStyle(el).color.match(/[\d.]+/g); el.remove(); } catch(e){}
+  return m && m.length >= 3 ? m.slice(0, 3).map(Number) : [134, 179, 255];
+}
+const lumOf = c => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const rgbCss = (c, a = 1) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+function brightRgb(c){ let x = c, i = 0; while (lumOf(x) < 0.55 && i++ < 12) x = mixRgb(x, [255, 255, 255], 0.14); return x; }
+/* Mettaður, dökkur litur í sama litatón (HSL): hvítur texti les vel á honum */
+function deepRgb(c, L = 0.42){
+  const [r, g, b] = c.map(v => v / 255), mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
+  let h = 0, sat = dd ? dd / (1 - Math.abs(2 * l - 1)) : 0;
+  if (dd) h = mx === r ? ((g - b) / dd + 6) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4;
+  sat = Math.min(1, Math.max(sat, 0.62)); const C = (1 - Math.abs(2 * L - 1)) * sat, X = C * (1 - Math.abs(h % 2 - 1)), m = L - C / 2;
+  const t = [[C, X, 0], [X, C, 0], [0, C, X], [0, X, C], [X, 0, C], [C, 0, X]][Math.floor(h) % 6];
+  return t.map(v => Math.round((v + m) * 255));
+}
+/* Stærsta talan og skemmtilegur samanburður */
+function shareHero(S){
+  const d = S.d, year = S.kind === 'year', when = year ? 'á árinu' : 'í vikunni', top = d.types.length ? d.types[0][0] : null;
+  if (d.vol >= 1000 && (top === 'lift' || !d.km)){
+    const val = d.vol >= 10000 ? `${nf(d.vol / 1000, d.vol >= 100000 ? 0 : 1)} t` : `${nf(d.vol)} kg`;
+    const w = Math.round(d.vol / 150000), e = Math.round(d.vol / 6000), b = Math.round(d.vol / 1500);
+    const cmp = w >= 1 ? `${nf(w)} ${plural(w, 'steypireyður', 'steypireyðar')}` : e >= 1 ? `${nf(e)} ${plural(e, 'afrískur fíll', 'afrískir fílar')}` : b >= 1 ? `${nf(b)} ${plural(b, 'fólksbíll', 'fólksbílar')}` : '';
+    return { key: 'vol', val, cap: `lyft ${when}${cmp ? `, jafn þungt og ${cmp}` : ''}` };
+  }
+  if (d.km >= 1){
+    const cmp = year ? (d.km >= 1322 ? 'lengra en hringvegurinn!' : `${Math.round(d.km / 1322 * 100)}% af hringveginum`)
+      : d.km >= 42.195 ? `jafnt og ${nf(d.km / 42.195, 1)} maraþon` : d.km >= 21.1 ? 'meira en hálfmaraþon' : '';
+    return { key: 'km', val: `${nf(d.km, d.km >= 100 ? 0 : 1)} km`, cap: `lagðir að baki ${when}${cmp ? `, ${cmp}` : ''}` };
+  }
+  return { key: 'mins', val: d.mins >= 120 ? `${nf(d.mins / 60, 1)} klst` : `${nf(d.mins)} mín`, cap: `á hreyfingu ${when}` };
+}
+function shareStats(S, skip){
+  const d = S.d, year = S.kind === 'year', out = [];
+  if (skip !== 'n') out.push([String(d.n), d.n === 1 ? 'æfing' : 'æfingar']);
+  if (skip !== 'mins') out.push(year ? [nf(d.mins / 60, 0), 'klst'] : [nf(d.mins), 'mín']);
+  if (S.streak) out.push([String(S.streak), S.streak === 1 ? 'vika í röð' : 'vikur í röð']);
+  if (d.vol && skip !== 'vol') out.push([d.vol >= 10000 ? `${nf(d.vol / 1000, d.vol >= 100000 ? 0 : 1)} t` : `${nf(d.vol)} kg`, 'lyft']);
+  if (d.km && skip !== 'km') out.push([nf(d.km, year ? 0 : 1), 'km']);
+  return out.slice(0, 3);
+}
+/* Dagar vikunnar (eða mánuðir ársins) og ríkjandi íþrótt hvers dags */
+function shareDays(S){
+  const ss = S.d.ss;
+  if (S.kind === 'year') return Array.from({ length: 12 }, (_, i) => { const l = ss.filter(s => +s.date.slice(5, 7) === i + 1); return { n: l.length, type: domType(l), lbl: 'JFMAMJJÁSOND'[i] }; });
+  const from = parseYmd(S.from);
+  return Array.from({ length: 7 }, (_, i) => { const day = ymd(addDays(from, i)), l = ss.filter(s => s.date === day); return { n: l.length, type: domType(l), lbl: 'MÞMFFLS'[i] }; });
+}
+function domType(list){ const m = {}; list.forEach(s => { const k = TYPES[s.type] ? s.type : 'other'; m[k] = (m[k] || 0) + minsOf(s); }); return Object.entries(m).sort((a, b) => b[1] - a[1]).map(x => x[0])[0] || null; }
+/* Hringurinn: vikumarkmið ef það er til, annars dagar með æfingu (eða vikur á árinu) */
+function shareRing(S){
+  const d = S.d;
+  if (S.kind === 'year'){
+    const y = +S.from.slice(0, 4), now = new Date(), weeks = new Set(d.ss.map(s => ymd(weekStart(parseYmd(s.date))))).size;
+    const tot = y < now.getFullYear() ? 52 : Math.max(1, Math.min(52, Math.ceil(((now - new Date(y, 0, 1)) / 864e5 + 1) / 7)));
+    return { v: weeks, pct: weeks / tot, lbl: `af ${tot} vikum með æfingu` };
+  }
+  const g = state.active === me.uid ? activeGoals(myGoals).find(x => x.type === 'weekly' && (!x.activity || x.activity === 'all') && (x.metric === 'sessions' || x.metric === 'minutes') && x.target > 0) : null;
+  if (g){ const v = g.metric === 'sessions' ? d.n : d.mins; return { v, pct: v / g.target, lbl: `af ${nf(g.target)} ${g.metric === 'sessions' ? plural(g.target, 'æfingu', 'æfingum') : 'mínútum'}`, goal: true }; }
+  return { v: d.days, pct: d.days / 7, lbl: `${plural(d.days, 'dagur', 'dagar')} af 7 með æfingu` };
+}
+/* Met tímabilsins: þyngsta sett í æfingu miðað við fyrri æfingar, PB í CrossFit og golfmet. Annars lengsta æfingin */
+function shareHighlight(S){
+  const d = S.d, inP = s => s.date >= S.from && s.date <= S.to, recs = [];
+  const hist = {};
+  mySessions().filter(s => s.type === 'lift' && s.date <= S.to).sort((a, b) => a.date.localeCompare(b.date)).forEach(s => (s.exercises || []).forEach(ex => {
+    let best = null; (ex.sets || []).forEach(st => { const kg = num(st.kg); if (realSet(st) && kg > 0 && (!best || kg > best.kg || (kg === best.kg && (num(st.reps) || 0) > best.reps))) best = { kg, reps: num(st.reps) || 0 }; });
+    if (!best) return;
+    const h = hist[ex.exId] = hist[ex.exId] || { max: 0, n: 0 };
+    if (inP(s) && h.n >= PR_MIN - 1 && best.kg > h.max) recs.push({ id: ex.exId, title: ex.name || exName(ex.exId), val: `${nf(best.kg, 1)} kg${best.reps > 1 ? ` × ${best.reps}` : ''}`, sub: `+${nf(best.kg - h.max, 1)} kg frá fyrra meti`, score: (best.kg - h.max) / h.max });
+    h.max = Math.max(h.max, best.kg); h.n++;
+  }));
+  const lift = {}; recs.forEach(r => { if (!lift[r.id] || r.score >= lift[r.id].score) lift[r.id] = r; });
+  const all = Object.values(lift);
+  d.ss.forEach(s => {
+    (s.prs || []).forEach(p => all.push({ title: p.name, val: pbText(p), sub: 'Persónulegt met', score: 0.05 }));
+    if (s.pb === 'round') all.push({ title: 'Golf', val: `${s.score} högg`, sub: `Besti hringurinn á ${s.sub === 'h9' ? '9' : '18'} holum`, score: 0.05 });
+    if (s.pb === 'long') all.push({ title: 'Golf', val: `${nf(s.longest)} m`, sub: 'Lengsti boltinn', score: 0.05 });
+  });
+  all.sort((a, b) => b.score - a.score);
+  if (all.length) return { ...all[0], tag: 'NÝTT MET', more: all.length - 1 };
+  const s = [...d.ss].sort((a, b) => minsOf(b) - minsOf(a))[0]; if (!s) return null;
+  return { tag: S.kind === 'year' ? 'LENGSTA ÆFING ÁRSINS' : 'LENGSTA ÆFINGIN', title: (TYPES[s.type] || {}).name || 'Æfing', val: `${nf(minsOf(s))} mín${kmOf(s) ? ` · ${nf(kmOf(s), 1)} km` : ''}`, sub: fmtDate(s.date), more: 0 };
+}
+function drawShare(S, style){
+  let c, g;
+  try { c = document.createElement('canvas'); c.width = 1080; c.height = 1920; g = c.getContext('2d'); } catch(e){ return null; }
+  if (!g) return null;
+  const font = (w, s) => `${w} ${s}px "Plus Jakarta Sans", system-ui, sans-serif`;
+  const sp = v => { try { g.letterSpacing = v; } catch(e){} };
+  const rr = (x, y, w, h, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); };
+  const fit = (t, w, size, max) => { g.font = font(w, size); while (size > 20 && g.measureText(t).width > max){ size -= 4; g.font = font(w, size); } return size; };
+  const wrap = (t, x, y, max, lh) => { const words = t.split(' '); let line = ''; for (const wd of words){ const tryL = line ? line + ' ' + wd : wd; if (g.measureText(tryL).width > max && line){ g.fillText(line, x, y); y += lh; line = wd; } else line = tryL; } g.fillText(line, x, y); return y; };
+  const grad = (a, b) => { const bg = g.createLinearGradient(0, 0, 1080, 1920); bg.addColorStop(0, a); bg.addColorStop(1, b); g.fillStyle = bg; g.fillRect(0, 0, 1080, 1920); };
+  const d = S.d, year = S.kind === 'year', top = d.types.length ? d.types[0][0] : 'other';
+  const foot = col => { sp('0px'); g.fillStyle = col; g.font = font(600, 36); g.textAlign = 'left'; g.fillText('aefingabokin.github.io', 96, 1840); };
+  const statRow = (stats, y, center) => stats.forEach((st, i) => { const x = center ? 96 + 888 / stats.length * (i + 0.5) : 96 + i * 300;
+    g.textAlign = center ? 'center' : 'left'; g.fillStyle = '#FFFFFF'; fit(st[0], 800, 76, 270); g.fillText(st[0], x, y);
+    g.fillStyle = '#9FC3DA'; g.font = font(600, 36); g.fillText(st[1], x, y + 52); });
+  g.textBaseline = 'alphabetic';
+  if (style === 'best'){
+    grad('#14243A', '#2A2140');
+    sp('6px'); g.fillStyle = '#9FC3DA'; const hd = `ÆFINGABÓKIN · ${S.sub.toUpperCase()}`; fit(hd, 700, 36, 820); g.fillText(hd, 96, 170);
+    sp('0px'); g.fillStyle = '#FFFFFF'; fit(S.title, 800, 80, 888); g.fillText(S.title, 96, 270);
+    const R = shareRing(S), cx = 540, cy = 610, rad = 220, pct = Math.max(0, Math.min(1, R.pct || 0));
+    g.lineWidth = 46; g.lineCap = 'round';
+    g.strokeStyle = 'rgba(255,255,255,0.10)'; g.beginPath(); g.arc(cx, cy, rad, 0, Math.PI * 2); g.stroke();
+    if (pct > 0){ g.strokeStyle = '#F5D06B'; g.beginPath(); g.arc(cx, cy, rad, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * pct); g.stroke(); }
+    g.textAlign = 'center'; g.fillStyle = '#FFFFFF'; fit(nf(R.v), 800, 170, 300); g.fillText(nf(R.v), cx, cy + 40);
+    g.fillStyle = '#C9DCEA'; fit(R.lbl, 600, 38, 340); g.fillText(R.lbl, cx, cy + 105);
+    if (R.goal && pct >= 1){ g.fillStyle = '#F5D06B'; g.font = font(800, 38); g.fillText('Markmiði náð!', cx, cy + rad + 100); }
+    const H = shareHighlight(S);
+    if (H){
+      const y0 = 980, h = 300; rr(96, y0, 888, h, 44); g.fillStyle = 'rgba(245,208,107,0.14)'; g.fill(); g.lineWidth = 4; g.strokeStyle = 'rgba(245,208,107,0.6)'; g.stroke();
+      g.textAlign = 'left'; sp('5px'); g.fillStyle = '#F5D06B'; g.font = font(800, 34); g.fillText(H.tag, 146, y0 + 76);
+      sp('0px'); g.fillStyle = '#FFFFFF'; const line = `${H.title} ${H.val}`; fit(line, 800, 66, 788); g.fillText(line, 146, y0 + 162);
+      g.fillStyle = '#C9DCEA'; const sub = H.more ? `${H.sub} · og ${H.more} ${plural(H.more, 'annað met', 'önnur met')}` : H.sub; fit(sub, 600, 38, 788); g.fillText(sub, 146, y0 + 228);
+    }
+    statRow(shareStats(S, 'n'), 1600, true);
+    foot('#9FC3DA');
+  } else if (style === 'poster'){
+    const base = shareRgb(top), deep = deepRgb(base);
+    grad(rgbCss(deep), rgbCss(deepRgb(base, 0.24)));
+    const soft = rgbCss(mixRgb(brightRgb(base), [255, 255, 255], 0.55));
+    sp('6px'); g.fillStyle = soft; g.font = font(700, 36); g.fillText('ÆFINGABÓKIN', 96, 170);
+    sp('0px'); const hd = `${S.title} · ${S.sub}`; fit(hd, 600, 48, 888); g.fillText(hd, 96, 260);
+    g.fillStyle = '#FFFFFF'; sp('-20px'); const big = String(d.n); fit(big, 800, 600, 900); g.fillText(big, 72, 860); sp('0px');
+    g.font = font(800, 120); g.fillText(d.n === 1 ? 'æfing' : 'æfingar', 90, 1010);
+    g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(96, 1090, 888, 4);
+    g.fillStyle = '#FFFFFF'; const lines = [year ? `${nf(d.mins / 60, 0)} klukkustundir` : `${nf(d.mins)} mínútur`];
+    if (d.vol) lines.push(`${d.vol >= 10000 ? nf(d.vol / 1000, d.vol >= 100000 ? 0 : 1) + ' tonn' : nf(d.vol) + ' kg'} lyft`);
+    if (d.km) lines.push(`${nf(d.km, year ? 0 : 1)} km`);
+    if (S.streak) lines.push(`${S.streak} ${S.streak === 1 ? 'vika' : 'vikur'} í röð`);
+    lines.slice(0, 3).forEach((l, i) => { fit(l, 700, 68, 888); g.fillText(l, 96, 1210 + i * 96); });
+    if (year){ g.fillStyle = soft; g.font = font(700, 44); g.fillText(`Besti mánuðurinn: ${S.best}`, 96, 1700); }
+    else shareDays(S).forEach((x, i) => { const cx = 130 + i * 104, cy = 1680; g.beginPath(); g.arc(cx, cy, 36, 0, Math.PI * 2);
+      if (x.n){ g.fillStyle = '#FFFFFF'; g.fill(); } else { g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,0.4)'; g.stroke(); }
+      g.fillStyle = x.n ? rgbCss(deep) : 'rgba(255,255,255,0.6)'; g.font = font(800, 30); g.textAlign = 'center'; g.fillText(x.lbl, cx, cy + 11); g.textAlign = 'left'; });
+    foot(soft);
+  } else {
+    grad('#0B1F33', '#123E5C');
+    sp('6px'); g.fillStyle = '#9FC3DA'; g.font = font(700, 36); g.fillText('ÆFINGABÓKIN', 96, 170);
+    sp('0px'); g.fillStyle = '#FFFFFF'; fit(S.title, 800, 96, 888); g.fillText(S.title, 96, 290);
+    g.fillStyle = '#C9DCEA'; g.font = font(600, 44); g.fillText(S.sub, 96, 360);
+    const days = shareDays(S), n = days.length, gap = n === 7 ? 22 : 14, w = (888 - gap * (n - 1)) / n;
+    const maxN = Math.max(1, ...days.map(x => x.n));
+    days.forEach((x, i) => { const X = 96 + i * (w + gap);
+      if (n === 7){ rr(X, 450, w, 170, 28); g.fillStyle = x.n ? rgbCss(brightRgb(shareRgb(x.type))) : 'rgba(255,255,255,0.08)'; g.fill();
+        if (x.n > 1){ g.fillStyle = '#0B1F33'; g.font = font(800, 40); g.textAlign = 'center'; g.fillText(`${x.n}×`, X + w / 2, 550); } }
+      else { const h = x.n ? 40 + 200 * x.n / maxN : 14; rr(X, 660 - h, w, h, 14); g.fillStyle = x.n ? rgbCss(brightRgb(shareRgb(x.type))) : 'rgba(255,255,255,0.08)'; g.fill(); }
+      g.textAlign = 'center'; g.fillStyle = '#9FC3DA'; g.font = font(700, 34); g.fillText(x.lbl, X + w / 2, n === 7 ? 676 : 716); });
+    const H = shareHero(S); g.textAlign = 'left'; g.fillStyle = '#FFFFFF'; fit(H.val, 800, 210, 888); g.fillText(H.val, 90, 1230);
+    g.fillStyle = '#C9DCEA'; g.font = font(600, 48); wrap(H.cap, 96, 1310, 888, 62);
+    statRow(shareStats(S, H.key), 1610, false);
+    foot('#9FC3DA');
+  }
+  return c;
+}
 async function shareCard(){
   const S = ui.share; if (!S) return;
-  const c = document.createElement('canvas'); c.width = 1080; c.height = 1920;
-  const g = c.getContext('2d'); if (!g) return toast('Vafrinn styður ekki myndir');
-  const css = n => (getComputedStyle(document.documentElement).getPropertyValue(n) || '').trim() || '#4CC3FF';
-  const bg = g.createLinearGradient(0, 0, 1080, 1920); bg.addColorStop(0, '#0B1F33'); bg.addColorStop(1, '#0E5C63'); g.fillStyle = bg; g.fillRect(0, 0, 1080, 1920);
-  const font = (w, s) => `${w} ${s}px "Plus Jakarta Sans", system-ui, sans-serif`;
-  g.fillStyle = '#9FC3DA'; g.font = font(700, 40); g.fillText('ÆFINGABÓKIN', 90, 170);
-  g.fillStyle = '#FFFFFF'; g.font = font(800, 96); g.fillText(S.title, 90, 300);
-  g.fillStyle = '#C9DCEA'; g.font = font(600, 44); g.fillText(S.sub, 90, 370);
-  const d = S.d, stats = [[String(d.n), 'æfingar'], [nf(S.kind === 'year' ? d.mins / 60 : d.mins, 0), S.kind === 'year' ? 'klukkustundir' : 'mínútur']];
-  if (d.km) stats.push([nf(d.km, S.kind === 'year' ? 0 : 1), 'kílómetrar']);
-  if (d.vol) stats.push([d.vol >= 10000 ? nf(d.vol / 1000, 1) + ' t' : nf(d.vol) + ' kg', 'lyft']);
-  if (S.streak) stats.push([String(S.streak), S.streak === 1 ? 'vika í röð' : 'vikur í röð']);
-  if (d.pbs) stats.push([String(d.pbs), 'met']);
-  stats.slice(0, 6).forEach((st, i) => { const x = 90 + (i % 2) * 470, y = 560 + Math.floor(i / 2) * 260;
-    g.fillStyle = 'rgba(255,255,255,0.08)'; g.beginPath(); g.roundRect ? g.roundRect(x - 20, y - 150, 430, 220, 36) : g.rect(x - 20, y - 150, 430, 220); g.fill();
-    g.fillStyle = '#FFFFFF'; g.font = font(800, 110); g.fillText(st[0], x + 10, y - 10);
-    g.fillStyle = '#C9DCEA'; g.font = font(600, 40); g.fillText(st[1], x + 14, y + 44); });
-  let y = 1380; g.fillStyle = '#FFFFFF'; g.font = font(800, 48); g.fillText('Íþróttirnar', 90, y); y += 40;
-  const max = d.types.length ? d.types[0][1] : 1;
-  d.types.slice(0, 4).forEach(([k, n]) => { y += 80; g.fillStyle = '#E3EEF8'; g.font = font(700, 40); g.fillText(TYPES[k].name, 90, y);
-    g.fillStyle = 'rgba(255,255,255,0.12)'; g.fillRect(470, y - 30, 440, 30); g.fillStyle = css(`--c-${k}`); g.fillRect(470, y - 30, 440 * n / max, 30);
-    g.fillStyle = '#FFFFFF'; g.fillText(String(n), 940, y); });
-  g.fillStyle = '#9FC3DA'; g.font = font(600, 36); g.fillText('aefingabokin.github.io', 90, 1840);
+  await shareFonts();
+  const c = drawShare(S, shareStyle()); if (!c) return toast('Vafrinn styður ekki myndir');
   const blob = await new Promise(r => c.toBlob(r, 'image/png')); if (!blob) return toast('Tókst ekki að búa til mynd');
   const file = new File([blob], S.kind === 'year' ? 'arid-mitt.png' : 'vikan-min.png', { type: 'image/png' });
   try { if (navigator.canShare && navigator.canShare({ files: [file] })){ await navigator.share({ files: [file], title: S.title }); return; } } catch(e){ if (e && e.name === 'AbortError') return; }
@@ -4274,6 +4437,8 @@ document.addEventListener('click', async e => {
     case 'sumopen': openSummary(); break;
     case 'yearopen': openYear(); break;
     case 'sharecard': shareCard(); break;
+    case 'sharestyle': ui.shareStyle = d.k; try { localStorage.setItem(SHARE_KEY, d.k); } catch(e){}
+      document.querySelectorAll('[data-act="sharestyle"]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.k === d.k))); break;
     case 'poolregion': openPoolRegion(d.v); break;
     case 'repeat': { const src = state.sessions.find(x => x.id === d.id); if (src) draftFrom(src); break; }
     case 'tpluse': { const t = (settings.templates || []).find(x => x.id === d.id); if (t) draftFrom(t); break; }
