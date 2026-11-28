@@ -30,6 +30,12 @@ Verkefni `aefingabokin` (Spark, ókeypis). Firestore í eur3, innskráning með 
 - Útlit vikurits: `dots` (sjálfgefið), `bars`, `tiles`, `rings`. „Litir íþrótta“ er falið í stillingum í bili.
 - Allt þarf að virka í síma (412 px), á opnum Galaxy Fold (≥700 px), með valmynd vinstra megin (≥840 px) og á breiðum skjá (≥1000 px).
 
+## Heimasíða (`heimasida/`)
+Kynningarsíða á aefingabokin.github.io/heimasida/, ein sjálfstæð `index.html` í Superhuman-stíl (pappír #F2F0EB, vín #421D24, lilla #D4C7FF,
+lón #0C4243, letrið Inter). Skjámyndir úr appinu og ljósmyndir (gerðar með gervigreind, Aron má nota þær) eru í `heimasida/myndir/`.
+Engar fullyrðingar um „besta appið“; allt sem síðan segir þarf að standast kóðann. Nafn Arons á ekki að vera á síðunni.
+Þjónustuvinnsla appsins (sw.js) nær líka yfir síðuna: net fyrst, svo hún er alltaf ný þegar net er.
+
 ## Staða (útgáfa 3.11, CACHE v69)
 3.11: deilimynd vikunnar og ársins í þremur útlitum sem notandinn velur á milli (`sharePicker`, smámyndir teiknaðar með `paintSharePicks`,
 valið í localStorage `aefingabokin.sharestyle`). `drawShare(S, style)` teiknar 1080 × 1920:
